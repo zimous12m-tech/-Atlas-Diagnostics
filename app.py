@@ -18,9 +18,9 @@ HTML_TEMPLATE = """
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Atlas-Diagnostics PRO — Rótulos Dinâmicos & Contexto</title>
+<title>Atlas-Diagnostics PRO — Recuperação Segura</title>
 <meta property="og:title" content="Atlas-Diagnostics — Sistema de Diagnóstico Clínico Profissional">
-<meta property="og:description" content="Avaliação cirúrgica com subpilares dinâmicos, guia explicativo '?' e gráfico de aranha duplo.">
+<meta property="og:description" content="Avaliação cirúrgica com subpilares, recuperação avançada e gráfico de aranha duplo.">
 <meta property="og:image" content="https://atlas-diagnostics.onrender.com/static/capa.png?v=2">
 <meta property="og:url" content="https://atlas-diagnostics.onrender.com/?v=2">
 <meta property="og:type" content="website">
@@ -44,7 +44,7 @@ body { background-color: var(--bg); color: var(--text); font-family: 'Inter', sa
 .container { width: 100%; max-width: 1100px; display: flex; flex-direction: column; gap: 20px; }
 
 #authScreen {
-    max-width: 420px;
+    max-width: 440px;
     margin: 40px auto;
     background: var(--card-bg);
     border: 1px solid var(--gold);
@@ -200,10 +200,21 @@ h1 { font-family: 'Cinzel', serif; color: var(--gold); font-size: 1.6rem; margin
         </div>
         <div id="authMsg" style="font-size:0.8rem; color:var(--red); text-align:center; min-height:16px;"></div>
         
+        <!-- CAMPOS DE LOGIN / REGISTO / RECUPERAÇÃO -->
         <input type="text" id="authUsername" class="auth-input" placeholder="Nome de Utilizador" autocomplete="off">
-        <input type="email" id="authEmail" class="auth-input" placeholder="E-mail" style="display:none;" autocomplete="off">
-        <input type="password" id="authPassword" class="auth-input" placeholder="Password / Nova Password" autocomplete="new-password">
+        <input type="email" id="authEmail" class="auth-input" placeholder="E-mail (opcional no registo/recuperação)" style="display:none;" autocomplete="off">
+        <input type="text" id="authSecret" class="auth-input" placeholder="Código Secreto PIN (opcional)" style="display:none;" autocomplete="off">
         
+        <div id="secPerguntaContainer" style="display:none; flex-direction:column; gap:8px;">
+            <input type="text" id="authPergunta" class="auth-input" placeholder="Pergunta de Segurança (ex: Livro favorito?)" autocomplete="off">
+            <input type="text" id="authResposta" class="auth-input" placeholder="Resposta à Pergunta" autocomplete="off">
+        </div>
+
+        <input type="password" id="authPassword" class="auth-input" placeholder="Password" autocomplete="new-password">
+        
+        <!-- CAMPO EXCLUSIVO PARA CONFIRMAR NOVA PASSWORD -->
+        <input type="password" id="authPasswordConfirm" class="auth-input" placeholder="Repita a Nova Password" style="display:none;" autocomplete="new-password">
+
         <button type="button" class="btn-auth" id="authBtnAction" onclick="fazerLogin()">Entrar na Conta</button>
     </div>
 
@@ -308,6 +319,7 @@ let clientesData = [];
 let clienteAtualId = null;
 let sessaoAtualId = null;
 let myRadarChart = null;
+let recuperacaoValidada = false; // Estado para controlar se já passou na validação de recuperação
 
 const subNvlMapa = { baixo: 20, medio: 50, alto: 90 };
 
@@ -415,24 +427,58 @@ function switchTab(modo) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     event.target.classList.add('active');
     const btn = document.getElementById('authBtnAction');
+    
     document.getElementById('authUsername').value = '';
     document.getElementById('authEmail').value = '';
+    document.getElementById('authSecret').value = '';
+    document.getElementById('authPergunta').value = '';
+    document.getElementById('authResposta').value = '';
     document.getElementById('authPassword').value = '';
+    document.getElementById('authPasswordConfirm').value = '';
     document.getElementById('authMsg').innerText = '';
-    
+    recuperacaoValidada = false;
+
     let emailField = document.getElementById('authEmail');
+    let secretField = document.getElementById('authSecret');
+    let secContainer = document.getElementById('secPerguntaContainer');
+    let pwdField = document.getElementById('authPassword');
+    let pwdConfirmField = document.getElementById('authPasswordConfirm');
+
     if(modo === 'login') {
         btn.innerText = "Entrar na Conta";
         btn.setAttribute('onclick', 'fazerLogin()');
         emailField.style.display = 'none';
+        secretField.style.display = 'none';
+        secContainer.style.display = 'none';
+        pwdField.style.display = 'block';
+        pwdField.placeholder = "Password";
+        pwdConfirmField.style.display = 'none';
     } else if(modo === 'signup') {
         btn.innerText = "Registar Conta";
         btn.setAttribute('onclick', 'fazerSignup()');
         emailField.style.display = 'block';
+        emailField.placeholder = "E-mail (opcional)";
+        secretField.style.display = 'block';
+        secretField.placeholder = "Código Secreto PIN (opcional)";
+        secContainer.style.display = 'flex';
+        document.getElementById('authPergunta').placeholder = "Pergunta de Segurança (ex: Livro favorito?)";
+        document.getElementById('authResposta').placeholder = "Resposta à Pergunta";
+        pwdField.style.display = 'block';
+        pwdField.placeholder = "Password";
+        pwdConfirmField.style.display = 'none';
     } else {
-        btn.innerText = "Redefinir Password";
-        btn.setAttribute('onclick', 'fazerRecuperacao()');
+        // MODO RECUPERAÇÃO INICIAL
+        btn.innerText = "Validar Dados de Recuperação";
+        btn.setAttribute('onclick', 'verificarRecuperacao()');
         emailField.style.display = 'block';
+        emailField.placeholder = "E-mail registado (se lembra)";
+        secretField.style.display = 'block';
+        secretField.placeholder = "Código Secreto PIN (se lembra)";
+        secContainer.style.display = 'flex';
+        document.getElementById('authPergunta').placeholder = "Sua Pergunta de Segurança";
+        document.getElementById('authResposta').placeholder = "Sua Resposta de Segurança";
+        pwdField.style.display = 'none';
+        pwdConfirmField.style.display = 'none';
     }
 }
 
@@ -457,23 +503,86 @@ async function fazerLogin() {
 async function fazerSignup() {
     let u = document.getElementById('authUsername').value;
     let e = document.getElementById('authEmail').value;
+    let s = document.getElementById('authSecret').value;
+    let q = document.getElementById('authPergunta').value;
+    let r = document.getElementById('authResposta').value;
     let p = document.getElementById('authPassword').value;
-    if(!u || !e || !p) { document.getElementById('authMsg').innerText = "Preencha todos os campos."; return; }
-    let res = await fetch('/api/signup', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username: u, email: e, password: p}) });
+
+    if(!u || !p) { document.getElementById('authMsg').innerText = "Nome de utilizador e password são obrigatórios."; return; }
+
+    let res = await fetch('/api/signup', { 
+        method: 'POST', 
+        headers:{'Content-Type':'application/json'}, 
+        body: JSON.stringify({username: u, email: e, secret: s, pergunta: q, resposta: r, password: p}) 
+    });
     let data = await res.json();
     if(data.success) { alert("Conta criada com sucesso!"); switchTab('login'); }
     else { document.getElementById('authMsg').innerText = data.error; }
 }
 
-async function fazerRecuperacao() {
+async function verificarRecuperacao() {
     let u = document.getElementById('authUsername').value;
     let e = document.getElementById('authEmail').value;
-    let p = document.getElementById('authPassword').value;
-    if(!u || !e || !p) { document.getElementById('authMsg').innerText = "Preencha todos os campos."; return; }
-    let res = await fetch('/api/recuperar', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username: u, email: e, password: p}) });
+    let s = document.getElementById('authSecret').value;
+    let q = document.getElementById('authPergunta').value;
+    let r = document.getElementById('authResposta').value;
+
+    if(!u) { document.getElementById('authMsg').innerText = "Insira pelo menos o Nome de Utilizador."; return; }
+
+    let res = await fetch('/api/recuperar/verificar', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({username: u, email: e, secret: s, pergunta: q, resposta: r})
+    });
     let data = await res.json();
-    if(data.success) { alert("🔑 Password redefinida com sucesso!"); switchTab('login'); }
-    else { document.getElementById('authMsg').innerText = data.error; }
+
+    if(data.success) {
+        recuperacaoValidada = true;
+        document.getElementById('authMsg').style.color = "var(--green)";
+        document.getElementById('authMsg').innerText = "✅ Validação bem-sucedida! Dados encontrados.";
+        
+        // Mostrar os dados validados ao utilizador
+        alert(`🔍 Dados encontrados para o utilizador: ${data.dados.username}\n• E-mail: ${data.dados.email || 'Não definido'}\n• Código PIN: ${data.dados.secret ? 'Definido (Oculto)' : 'Não definido'}\n• Pergunta: ${data.dados.pergunta || 'Não definida'}\n• Resposta: ${data.dados.resposta || 'Não definida'}`);
+
+        // Mudar para o passo de criar nova password
+        document.getElementById('authEmail').style.display = 'none';
+        document.getElementById('authSecret').style.display = 'none';
+        document.getElementById('secPerguntaContainer').style.display = 'none';
+        
+        document.getElementById('authPassword').style.display = 'block';
+        document.getElementById('authPassword').placeholder = "Nova Password";
+        document.getElementById('authPasswordConfirm').style.display = 'block';
+        
+        let btn = document.getElementById('authBtnAction');
+        btn.innerText = "Salvar Nova Password";
+        btn.setAttribute('onclick', 'salvarNovaPassword()');
+    } else {
+        document.getElementById('authMsg').style.color = "var(--red)";
+        document.getElementById('authMsg').innerText = data.error;
+    }
+}
+
+async function salvarNovaPassword() {
+    let u = document.getElementById('authUsername').value;
+    let p1 = document.getElementById('authPassword').value;
+    let p2 = document.getElementById('authPasswordConfirm').value;
+
+    if(!p1 || !p2) { document.getElementById('authMsg').innerText = "Preencha a nova password em ambos os campos."; return; }
+    if(p1 !== p2) { document.getElementById('authMsg').innerText = "As passwords não coincidem!"; return; }
+
+    let res = await fetch('/api/recuperar/salvar', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({username: u, password: p1})
+    });
+    let data = await res.json();
+
+    if(data.success) {
+        alert("🔑 Password redefinida com sucesso! Podes fazer login.");
+        switchTab('login');
+    } else {
+        document.getElementById('authMsg').innerText = data.error;
+    }
 }
 
 function fazerLogout() {
@@ -502,7 +611,6 @@ function initGrid() {
             let safeEx = (sp.ex || '').replace(/'/g, "'");
             let safeNome = sp.nome.replace(/'/g, "'");
 
-            // Rótulos dinâmicos inteligentes baseados no tipo do subpilar
             let btn1 = "Baixo", btn2 = "Médio", btn3 = "Alto";
             if(sp.tipo === 'sintoma') {
                 btn1 = "Raro"; btn2 = "Moderado"; btn3 = "Frequente";
@@ -882,12 +990,24 @@ def index():
 @app.route('/api/signup', methods=['POST'])
 def api_signup():
     data = request.json
-    u, e, p = data.get('username'), data.get('email'), data.get('password')
-    if not u or not e or not p: return jsonify({'success': False, 'error': 'Preencha todos os campos.'})
+    u = data.get('username')
+    p = data.get('password')
+    if not u or not p: return jsonify({'success': False, 'error': 'Nome de utilizador e password são obrigatórios.'})
+    
     user_file = os.path.join(DATA_DIR, f"{u}.json")
     if os.path.exists(user_file): return jsonify({'success': False, 'error': 'Utilizador já existe.'})
+    
+    user_payload = {
+        'username': u,
+        'email': data.get('email', '').strip(),
+        'secret': hash_password(data.get('secret', '').strip()) if data.get('secret') else '',
+        'pergunta': data.get('pergunta', '').strip(),
+        'resposta': hash_password(data.get('resposta', '').strip().lower()) if data.get('resposta') else '',
+        'password': hash_password(p),
+        'clientes': []
+    }
     with open(user_file, 'w', encoding='utf-8') as f:
-        json.dump({'email': e, 'password': hash_password(p), 'clientes': []}, f, ensure_ascii=False, indent=4)
+        json.dump(user_payload, f, ensure_ascii=False, indent=4)
     return jsonify({'success': True})
 
 @app.route('/api/login', methods=['POST'])
@@ -901,18 +1021,57 @@ def api_login():
             return jsonify({'success': True})
     return jsonify({'success': False, 'error': 'Credenciais inválidas.'})
 
-@app.route('/api/recuperar', methods=['POST'])
-def api_recuperar():
+@app.route('/api/recuperar/verificar', methods=['POST'])
+def api_recuperar_verificar():
     data = request.json
-    u, e, p = data.get('username'), data.get('email'), data.get('password')
+    u = data.get('username')
     user_file = os.path.join(DATA_DIR, f"{u}.json")
-    if os.path.exists(user_file):
-        with open(user_file, 'r', encoding='utf-8') as f: user_data = json.load(f)
-        if user_data.get('email') == e:
-            user_data['password'] = hash_password(p)
-            with open(user_file, 'w', encoding='utf-8') as f: json.dump(user_data, f, ensure_ascii=False, indent=4)
-            return jsonify({'success': True})
-    return jsonify({'success': False, 'error': 'Dados incorretos.'})
+    if not os.path.exists(user_file): return jsonify({'success': False, 'error': 'Utilizador não encontrado.'})
+    
+    with open(user_file, 'r', encoding='utf-8') as f: user_data = json.load(f)
+    
+    e = data.get('email', '').strip()
+    s = data.get('secret', '').strip()
+    r = data.get('resposta', '').strip().lower()
+
+    # Validação inteligente: pelo menos um dos métodos de segurança fornecidos tem de coincidir, ou o utilizador se lembra
+    match = False
+    if e and user_data.get('email') and user_data.get('email').lower() == e.lower():
+        match = True
+    if s and user_data.get('secret') and user_data.get('secret') == hash_password(s):
+        match = True
+    if r and user_data.get('resposta') and user_data.get('resposta') == hash_password(r):
+        match = True
+
+    if not match and not (not e and not s and not r):
+        return jsonify({'success': False, 'error': 'Os dados de recuperação inseridos não coincidem com os registados.'})
+
+    # Se passar, devolve os dados para mostrar ao utilizador
+    return jsonify({
+        'success': True,
+        'dados': {
+            'username': user_data.get('username'),
+            'email': user_data.get('email'),
+            'secret': user_data.get('secret'),
+            'pergunta': user_data.get('pergunta'),
+            'resposta': user_data.get('resposta')
+        }
+    })
+
+@app.route('/api/recuperar/salvar', methods=['POST'])
+def api_recuperar_salvar():
+    data = request.json
+    u, p = data.get('username'), data.get('password')
+    user_file = os.path.join(DATA_DIR, f"{u}.json")
+    if not os.path.exists(user_file): return jsonify({'success': False, 'error': 'Utilizador não encontrado.'})
+    
+    with open(user_file, 'r', encoding='utf-8') as f: user_data = json.load(f)
+    user_data['password'] = hash_password(p)
+    
+    with open(user_file, 'w', encoding='utf-8') as f:
+        json.dump(user_data, f, ensure_ascii=False, indent=4)
+        
+    return jsonify({'success': True})
 
 @app.route('/api/utilizador/apagar', methods=['POST'])
 def api_apagar_utilizador():
