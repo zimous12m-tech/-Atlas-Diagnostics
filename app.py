@@ -18,9 +18,9 @@ HTML_TEMPLATE = """
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Atlas-Diagnostics PRO — Raio-X Sistémico por Subpilares</title>
+<title>Atlas-Diagnostics PRO — Raio-X Sistémico Completo (AM vs DD)</title>
 <meta property="og:title" content="Atlas-Diagnostics — Sistema de Diagnóstico Clínico Profissional">
-<meta property="og:description" content="Avaliação cirúrgica com subpilares, subcategorias, gráfico de aranha e relatórios PDF.">
+<meta property="og:description" content="Avaliação cirúrgica com subpilares, gráfico de aranha duplo (AM vs Inércia DD) e relatórios PDF.">
 <meta property="og:image" content="https://atlas-diagnostics.onrender.com/static/capa.png">
 <meta property="og:url" content="https://atlas-diagnostics.onrender.com">
 <meta property="og:type" content="website">
@@ -118,9 +118,14 @@ h1 { font-family: 'Cinzel', serif; color: var(--gold); font-size: 1.6rem; margin
 
 .subpilar-row { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
 .subpilar-name { font-size: 0.8rem; color: var(--text); font-weight: 500; }
-.suboptions-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
-.sub-opt-btn { background: rgba(0,0,0,0.5); border: 1px solid var(--border); border-radius: 4px; color: var(--muted); font-size: 0.65rem; padding: 5px 2px; text-align: center; cursor: pointer; }
-.sub-opt-btn.active-sub { background: rgba(56, 189, 248, 0.25); border-color: var(--blue); color: #bae6fd; font-weight: bold; }
+
+.sub-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sub-group { display: flex; flex-direction: column; gap: 3px; }
+.sub-label { font-size: 0.68rem; color: var(--muted); }
+.options-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; }
+.sub-opt-btn { background: rgba(0,0,0,0.5); border: 1px solid var(--border); border-radius: 4px; color: var(--muted); font-size: 0.58rem; padding: 4px 1px; text-align: center; cursor: pointer; }
+.sub-opt-btn.active-am { background: rgba(212, 175, 55, 0.25); border-color: var(--gold); color: var(--gold); font-weight: bold; }
+.sub-opt-btn.active-dd { background: rgba(239, 68, 68, 0.25); border-color: var(--red); color: #fca5a5; font-weight: bold; }
 
 .report-box { background: rgba(0,0,0,0.5); border: 1px solid var(--border); border-radius: 10px; padding: 15px; font-size: 0.88rem; line-height: 1.5; color: var(--muted); }
 .report-box h3 { color: var(--gold); font-family: 'Cinzel', serif; margin-bottom: 8px; }
@@ -196,9 +201,9 @@ h1 { font-family: 'Cinzel', serif; color: var(--gold); font-size: 1.6rem; margin
         <!-- ESPAÇO DE TRABALHO -->
         <div id="workspaceArea" style="display:none; flex-direction:column; gap:20px;">
             
-            <!-- GRÁFICO DE ARANHA (RADAR) -->
+            <!-- GRÁFICO DE ARANHA (RADAR DUPLO: AM vs DD) -->
             <div class="panel">
-                <span style="font-family:'Cinzel',serif; color:var(--gold); font-size:1.05rem; text-align:center;">🕸️ Gráfico de Aranha — Equilíbrio Global dos 12 Pilares (Derivado dos Subpilares)</span>
+                <span style="font-family:'Cinzel',serif; color:var(--gold); font-size:1.05rem; text-align:center;">🕸️ Gráfico de Aranha — Confronto Sistémico (Energia AM vs Inércia/Peso DD)</span>
                 <div class="chart-container">
                     <canvas id="radarChart"></canvas>
                 </div>
@@ -214,7 +219,7 @@ h1 { font-family: 'Cinzel', serif; color: var(--gold); font-size: 1.6rem; margin
                 <input type="range" id="rangeImpacto" min="0" max="100" value="50" style="accent-color: var(--gold);" oninput="document.getElementById('lblImpactoVal').innerText = this.value + '%'">
             </div>
 
-            <!-- GRELHA DOS PILARES COM SUBPILARES -->
+            <!-- GRELHA DOS PILARES COM SUBPILARES (AM e DD) -->
             <div class="grid-pilares" id="pilaresGrid"></div>
 
             <!-- BOTÕES DE AÇÃO -->
@@ -233,7 +238,7 @@ h1 { font-family: 'Cinzel', serif; color: var(--gold); font-size: 1.6rem; margin
             <!-- RELATÓRIO E RAIO-X -->
             <div class="panel" id="relatorioPanel" style="display:none;">
                 <div class="report-box">
-                    <h3>🔍 Relatório de Raio-X por Subpilares</h3>
+                    <h3>🔍 Relatório de Raio-X por Subpilares (AM vs DD)</h3>
                     <div id="txtRaioX" style="margin-bottom: 12px; color: #fff;"></div>
                     <h3>💡 Conselho Terapêutico & Direção Causal</h3>
                     <div id="txtConselho" style="color: var(--gold);"></div>
@@ -250,7 +255,7 @@ let clienteAtualId = null;
 let sessaoAtualId = null;
 let myRadarChart = null;
 
-const subNvlMapa = { critico: 20, instavel: 50, saudavel: 90 };
+const subNvlMapa = { baixo: 20, medio: 50, alto: 90 };
 
 const pilaresDef = [
     {
@@ -259,23 +264,23 @@ const pilaresDef = [
             { id: "s1_1", nome: "Dormir cedo e rotina noturna" },
             { id: "s1_2", nome: "Estabilidade e profundidade do sono" },
             { id: "s1_3", nome: "Ausência de insónias e mente confusa" },
-            { id: "s1_4", nome: "Ambiente (sem barulho, luz ou stress acumulado)" }
+            { id: "s1_4", nome: "Ambiente (sem barulho, luz ou stress)" }
         ]
     },
     {
         id: 2, nome: "2. Dinheiro e Contas",
         subpilares: [
-            { id: "s2_1", nome: "Fluxo de caixa e cumprimento de obrigações" },
+            { id: "s2_1", nome: "Fluxo de caixa e obrigações" },
             { id: "s2_2", nome: "Ausência de ansiedade por dívidas" },
-            { id: "s2_3", nome: "Margem de poupança e investimento" }
+            { id: "s2_3", nome: "Margem de poupança" }
         ]
     },
     {
         id: 3, nome: "3. Trabalho e Projetos",
         subpilares: [
-            { id: "s3_1", nome: "Realização e alinhamento profissional" },
+            { id: "s3_1", nome: "Realização profissional" },
             { id: "s3_2", nome: "Gestão de prazos sem esgotamento" },
-            { id: "s3_3", nome: "Reconhecimento e retorno financeiro" }
+            { id: "s3_3", nome: "Retorno financeiro e reconhecimento" }
         ]
     },
     {
@@ -289,40 +294,40 @@ const pilaresDef = [
     {
         id: 5, nome: "5. Cabeça e Concentração",
         subpilares: [
-            { id: "s5_1", nome: "Foco sem ruminação mental excessiva" },
+            { id: "s5_1", nome: "Foco sem ruminação mental" },
             { id: "s5_2", nome: "Clareza emocional e resiliência" },
-            { id: "s5_3", nome: "Ausência de nevoeiro mental ou exaustão" }
+            { id: "s5_3", nome: "Ausência de exaustão mental" }
         ]
     },
     {
         id: 6, nome: "6. Ideias e Aprendizagem",
         subpilares: [
-            { id: "s6_1", nome: "Estímulo intelectual e novos conhecimentos" },
-            { id: "s6_2", nome: "Criatividade e aplicação de projetos" },
-            { id: "s6_3", nome: "Curiosidade e abertura mental" }
+            { id: "s6_1", nome: "Estímulo intelectual" },
+            { id: "s6_2", nome: "Criatividade e aplicação" },
+            { id: "s6_3", nome: "Curiosidade e abertura" }
         ]
     },
     {
         id: 7, nome: "7. Casa e Espaço à Volta",
         subpilares: [
-            { id: "s7_1", nome: "Organização e limpeza do espaço físico" },
-            { id: "s7_2", nome: "Sensação de refúgio e segurança no lar" },
-            { id: "s7_3", nome: "Ergonomia e conforto ambiental" }
+            { id: "s7_1", nome: "Organização e limpeza do espaço" },
+            { id: "s7_2", nome: "Sensação de refúgio no lar" },
+            { id: "s7_3", nome: "Conforto ambiental" }
         ]
     },
     {
         id: 8, nome: "8. Amigos e Apoio",
         subpilares: [
-            { id: "s8_1", nome: "Rede de contactos genuína e de confiança" },
-            { id: "s8_2", nome: "Partilha social sem toxicidade" },
-            { id: "s8_3", nome: "Disponibilidade de apoio mútuo" }
+            { id: "s8_1", nome: "Rede de contactos de confiança" },
+            { id: "s8_2", nome: "Partilha social saudável" },
+            { id: "s8_3", nome: "Disponibilidade de apoio" }
         ]
     },
     {
         id: 9, nome: "9. Organização do Tempo",
         subpilares: [
-            { id: "s9_1", nome: "Controlo sobre a agenda diária" },
-            { id: "s9_2", nome: "Equilíbrio entre obrigações e descanso" },
+            { id: "s9_1", nome: "Controlo sobre a agenda" },
+            { id: "s9_2", nome: "Equilíbrio trabalho/descanso" },
             { id: "s9_3", nome: "Ausência de atropelo por urgências" }
         ]
     },
@@ -330,14 +335,14 @@ const pilaresDef = [
         id: 10, nome: "10. Planos para o Futuro",
         subpilares: [
             { id: "s10_1", nome: "Visão clara a médio/longo prazo" },
-            { id: "s10_2", nome: "Metas estruturadas e passos acionáveis" },
-            { id: "s10_3", nome: "Sentimento de esperança e direção" }
+            { id: "s10_2", nome: "Metas estruturadas e acionáveis" },
+            { id: "s10_3", nome: "Sentimento de esperança" }
         ]
     },
     {
         id: 11, nome: "11. Saúde e Corpo",
         subpilares: [
-            { id: "s11_1", nome: "Nutrição e hidratação adequadas" },
+            { id: "s11_1", nome: "Nutrição e hidratação" },
             { id: "s11_2", nome: "Exercício físico e mobilidade" },
             { id: "s11_3", nome: "Vitalidade energética global" }
         ]
@@ -346,8 +351,8 @@ const pilaresDef = [
         id: 12, nome: "12. Paz Interior e Valores",
         subpilares: [
             { id: "s12_1", nome: "Alinhamento com princípios éticos" },
-            { id: "s12_2", nome: "Ausência de culpa ou conflito interno" },
-            { id: "s12_3", nome: "Sentimento de propósito e serenidade" }
+            { id: "s12_2", nome: "Ausência de conflito interno" },
+            { id: "s12_3", nome: "Serenidade e propósito" }
         ]
     }
 ];
@@ -442,12 +447,26 @@ function initGrid() {
             html += `
             <div class="subpilar-row">
                 <span class="subpilar-name">🔹 ${sp.nome}</span>
-                <div class="suboptions-row" id="row_sub_${sp.id}">
-                    <button type="button" data-nvl="critico" class="sub-opt-btn" onclick="selecionarSubNivel('${sp.id}', 'critico', this)">Crítico (20)</button>
-                    <button type="button" data-nvl="instavel" class="sub-opt-btn" onclick="selecionarSubNivel('${sp.id}', 'instavel', this)">Instável (50)</button>
-                    <button type="button" data-nvl="saudavel" class="sub-opt-btn" onclick="selecionarSubNivel('${sp.id}', 'saudavel', this)">Saudável (90)</button>
+                <div class="sub-controls">
+                    <div class="sub-group">
+                        <span class="sub-label">Energia (AM):</span>
+                        <div class="options-row" id="row_am_${sp.id}">
+                            <button type="button" data-nvl="baixo" class="sub-opt-btn" onclick="selecionarSub('${sp.id}', 'am', 'baixo', this)">Baixa</button>
+                            <button type="button" data-nvl="medio" class="sub-opt-btn" onclick="selecionarSub('${sp.id}', 'am', 'medio', this)">Média</button>
+                            <button type="button" data-nvl="alto" class="sub-opt-btn" onclick="selecionarSub('${sp.id}', 'am', 'alto', this)">Alta</button>
+                        </div>
+                    </div>
+                    <div class="sub-group">
+                        <span class="sub-label">Inércia/Peso (DD):</span>
+                        <div class="options-row" id="row_dd_${sp.id}">
+                            <button type="button" data-nvl="baixo" class="sub-opt-btn" onclick="selecionarSub('${sp.id}', 'dd', 'baixo', this)">Leve</button>
+                            <button type="button" data-nvl="medio" class="sub-opt-btn" onclick="selecionarSub('${sp.id}', 'dd', 'medio', this)">Médio</button>
+                            <button type="button" data-nvl="alto" class="sub-opt-btn" onclick="selecionarSub('${sp.id}', 'dd', 'alto', this)">Pesado</button>
+                        </div>
+                    </div>
                 </div>
-                <input type="hidden" id="val_sub_${sp.id}" value="50">
+                <input type="hidden" id="val_am_${sp.id}" value="50">
+                <input type="hidden" id="val_dd_${sp.id}" value="50">
             </div>`;
         });
 
@@ -456,11 +475,11 @@ function initGrid() {
     grid.innerHTML = html;
 }
 
-function selecionarSubNivel(subId, nivel, btn) {
-    document.getElementById(`val_sub_${subId}`).value = subNvlMapa[nivel];
+function selecionarSub(subId, tipo, nivel, btn) {
+    document.getElementById(`val_${tipo}_${subId}`).value = subNvlMapa[nivel];
     const row = btn.parentElement;
-    Array.from(row.children).forEach(b => b.classList.remove('active-sub'));
-    btn.classList.add('active-sub');
+    Array.from(row.children).forEach(b => b.classList.remove(tipo === 'am' ? 'active-am' : 'active-dd'));
+    btn.classList.add(tipo === 'am' ? 'active-am' : 'active-dd');
     atualizarGraficoAranha();
 }
 
@@ -576,12 +595,15 @@ function carregarSessaoSelecionada(sessaoId) {
 
     pilaresDef.forEach(p => {
         p.subpilares.forEach(sp => {
-            let val = 50;
-            if(sessao.subpilares && sessao.subpilares[sp.id] !== undefined) {
-                val = sessao.subpilares[sp.id];
+            let valAm = 50, valDd = 50;
+            if(sessao.subpilares && sessao.subpilares[sp.id]) {
+                valAm = sessao.subpilares[sp.id].am || 50;
+                valDd = sessao.subpilares[sp.id].dd || 50;
             }
-            document.getElementById(`val_sub_${sp.id}`).value = val;
-            atualizarBotaoSubVisual(sp.id, val);
+            document.getElementById(`val_am_${sp.id}`).value = valAm;
+            document.getElementById(`val_dd_${sp.id}`).value = valDd;
+            atualizarBotaoSubVisual(sp.id, 'am', valAm);
+            atualizarBotaoSubVisual(sp.id, 'dd', valDd);
         });
     });
 
@@ -590,33 +612,35 @@ function carregarSessaoSelecionada(sessaoId) {
     criarOuAtualizarGraficoAranha();
 }
 
-function atualizarBotaoSubVisual(subId, valor) {
-    let nivelNome = 'instavel';
+function atualizarBotaoSubVisual(subId, tipo, valor) {
+    let nivelNome = 'medio';
     for(let k in subNvlMapa) { if(subNvlMapa[k] == valor) nivelNome = k; }
-    let row = document.getElementById(`row_sub_${subId}`);
+    let row = document.getElementById(`row_${tipo}_${subId}`);
     Array.from(row.children).forEach(b => {
-        b.classList.remove('active-sub');
+        b.classList.remove(tipo === 'am' ? 'active-am' : 'active-dd');
         if(b.getAttribute('data-nvl') === nivelNome) {
-            b.classList.add('active-sub');
+            b.classList.add(tipo === 'am' ? 'active-am' : 'active-dd');
         }
     });
 }
 
-function calcularMediaPilar(pilar) {
+function calcularMediaPilar(pilar, tipo) {
     let soma = 0;
     pilar.subpilares.forEach(sp => {
-        soma += parseInt(document.getElementById(`val_sub_${sp.id}`).value);
+        soma += parseInt(document.getElementById(`val_${tipo}_${sp.id}`).value);
     });
     return Math.round(soma / pilar.subpilares.length);
 }
 
 function criarOuAtualizarGraficoAranha() {
-    let medias = pilaresDef.map(p => calcularMediaPilar(p));
+    let mediasAm = pilaresDef.map(p => calcularMediaPilar(p, 'am'));
+    let mediasDd = pilaresDef.map(p => calcularMediaPilar(p, 'dd'));
     let labels = pilaresDef.map(p => p.nome.split('. ')[1]);
 
     let ctx = document.getElementById('radarChart').getContext('2d');
     if(myRadarChart) {
-        myRadarChart.data.datasets[0].data = medias;
+        myRadarChart.data.datasets[0].data = mediasAm;
+        myRadarChart.data.datasets[1].data = mediasDd;
         myRadarChart.update();
     } else {
         myRadarChart = new Chart(ctx, {
@@ -625,12 +649,20 @@ function criarOuAtualizarGraficoAranha() {
                 labels: labels,
                 datasets: [
                     {
-                        label: 'Índice de Saúde do Pilar (Média Subpilares)',
-                        data: medias,
-                        backgroundColor: 'rgba(212, 175, 55, 0.25)',
+                        label: 'Energia Atual (AM)',
+                        data: mediasAm,
+                        backgroundColor: 'rgba(212, 175, 55, 0.2)',
                         borderColor: '#d4af37',
                         borderWidth: 2,
                         pointBackgroundColor: '#d4af37'
+                    },
+                    {
+                        label: 'Inércia / Peso (DD)',
+                        data: mediasDd,
+                        backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                        borderColor: '#ef4444',
+                        borderWidth: 2,
+                        pointBackgroundColor: '#ef4444'
                     }
                 ]
             },
@@ -652,7 +684,8 @@ function criarOuAtualizarGraficoAranha() {
 
 function atualizarGraficoAranha() {
     if(myRadarChart) {
-        myRadarChart.data.datasets[0].data = pilaresDef.map(p => calcularMediaPilar(p));
+        myRadarChart.data.datasets[0].data = pilaresDef.map(p => calcularMediaPilar(p, 'am'));
+        myRadarChart.data.datasets[1].data = pilaresDef.map(p => calcularMediaPilar(p, 'dd'));
         myRadarChart.update();
     }
 }
@@ -662,7 +695,10 @@ async function guardarSessaoAtual() {
     let subpilaresValores = {};
     pilaresDef.forEach(p => {
         p.subpilares.forEach(sp => {
-            subpilaresValores[sp.id] = parseInt(document.getElementById(`val_sub_${sp.id}`).value);
+            subpilaresValores[sp.id] = {
+                am: parseInt(document.getElementById(`val_am_${sp.id}`).value),
+                dd: parseInt(document.getElementById(`val_dd_${sp.id}`).value)
+            };
         });
     });
 
@@ -687,19 +723,25 @@ async function apagarSessaoAtual() {
 }
 
 function calcularResultadoRaioX() {
-    let mediasPilares = pilaresDef.map(p => ({ nome: p.nome, media: calcularMediaPilar(p) }));
-    mediasPilares.sort((a, b) => a.media - b.media);
+    let mediasPilares = pilaresDef.map(p => ({
+        nome: p.nome,
+        am: calcularMediaPilar(p, 'am'),
+        dd: calcularMediaPilar(p, 'dd')
+    }));
+    
+    // Ordenar por maior inércia/peso (DD) e menor energia (AM)
+    mediasPilares.sort((a, b) => (b.dd - b.am) - (a.am - a.ai));
 
     let maisCriticos = mediasPilares.slice(0, 3);
     let impacto = document.getElementById('rangeImpacto').value;
 
-    let raioHtml = `<strong>Áreas Mais Críticas (Foco de Intervenção):</strong><br>`;
+    let raioHtml = `<strong>Áreas de Maior Tensão (Inércia vs Energia):</strong><br>`;
     maisCriticos.forEach(cp => {
-        raioHtml += `- ${cp.nome}: Média de saúde ${cp.media}/90<br>`;
+        raioHtml += `- ${cp.nome}: Energia (AM): ${cp.am} | Inércia (DD): ${cp.dd}<br>`;
     });
     raioHtml += `<br><strong>Fator de Impacto Diário:</strong> ${impacto}%<br>`;
     
-    let conselhoHtml = `O vetor causal aponta para a estabilização prioritária de <strong>${maisCriticos[0].nome}</strong>. Como o impacto diário afeta ${impacto}% da rotina, focar os subpilares em défice trará uma recuperação em cascata para todo o sistema do cliente.`;
+    let conselhoHtml = `O vetor causal aponta para bloqueios em <strong>${maisCriticos[0].nome}</strong>, onde a inércia supera a vitalidade. Intervir nestes subpilares reduzirá o atrito sistémico em ${impacto}% do dia a dia do cliente.`;
 
     document.getElementById('txtRaioX').innerHTML = raioHtml;
     document.getElementById('txtConselho').innerHTML = conselhoHtml;
@@ -712,19 +754,20 @@ function exportarPDFSessao() {
     let chartImage = chartCanvas.toDataURL('image/png');
 
     let jan = window.open('', '_blank');
-    jan.document.write(`<html><head><title>Relatório Clínico por Subpilares</title><style>body{font-family:sans-serif;padding:30px;color:#000;} table{width:100%;border-collapse:collapse;margin-top:15px;} th,td{border:1px solid #ccc;padding:8px;text-align:left;font-size:0.85rem;} th{background:#f4f4f4;}</style></head><body>`);
-    jan.document.write(`<h1>Atlas-Diagnostics — Relatório Detalhado por Subpilares</h1>`);
+    jan.document.write(`<html><head><title>Relatório Clínico AM vs DD</title><style>body{font-family:sans-serif;padding:30px;color:#000;} table{width:100%;border-collapse:collapse;margin-top:15px;} th,td{border:1px solid #ccc;padding:8px;text-align:left;font-size:0.85rem;} th{background:#f4f4f4;}</style></head><body>`);
+    jan.document.write(`<h1>Atlas-Diagnostics — Relatório Detalhado (AM vs Inércia DD)</h1>`);
     jan.document.write(`<p><strong>Cliente:</strong> ${cliente.nome} | <strong>Idade:</strong> ${cliente.idade || 'N/A'}</p>`);
     jan.document.write(`<p><strong>Objetivo:</strong> ${cliente.objetivo || 'N/A'}</p><hr>`);
     
     jan.document.write(`<div style="text-align:center; margin:20px 0;"><img src="${chartImage}" style="max-width:400px;"/></div>`);
     
-    jan.document.write(`<h3>Avaliação Cirúrgica dos Subpilares:</h3>`);
+    jan.document.write(`<h3>Avaliação Cirúrgica dos Subpilares (AM vs DD):</h3>`);
     pilaresDef.forEach(p => {
-        jan.document.write(`<h4>${p.nome} (Média do Pilar: ${calcularMediaPilar(p)}/90)</h4><ul>`);
+        jan.document.write(`<h4>${p.nome} (Média AM: ${calcularMediaPilar(p, 'am')} | Média DD: ${calcularMediaPilar(p, 'dd')})</h4><ul>`);
         p.subpilares.forEach(sp => {
-            let val = document.getElementById(`val_sub_${sp.id}`).value;
-            jan.document.write(`<li>${sp.nome} — Pontuação: ${val}</li>`);
+            let valAm = document.getElementById(`val_am_${sp.id}`).value;
+            let valDd = document.getElementById(`val_dd_${sp.id}`).value;
+            jan.document.write(`<li>${sp.nome} — Energia (AM): ${valAm} | Inércia (DD): ${valDd}</li>`);
         });
         jan.document.write(`</ul>`);
     });
@@ -781,12 +824,13 @@ def api_recuperar():
     data = request.json
     u, e, p = data.get('username'), data.get('email'), data.get('password')
     user_file = os.path.join(DATA_DIR, f"{u}.json")
-    if not os.path.exists(user_file): return jsonify({'success': False, 'error': 'Utilizador não encontrado.'})
-    with open(user_file, 'r', encoding='utf-8') as f: user_data = json.load(f)
-    if user_data.get('email') != e: return jsonify({'success': False, 'error': 'O e-mail não coincide.'})
-    user_data['password'] = hash_password(p)
-    with open(user_file, 'w', encoding='utf-8') as f: json.dump(user_data, f, ensure_ascii=False, indent=4)
-    return jsonify({'success': True})
+    if os.path.exists(user_file):
+        with open(user_file, 'r', encoding='utf-8') as f: user_data = json.load(f)
+        if user_data.get('email') == e:
+            user_data['password'] = hash_password(p)
+            with open(user_file, 'w', encoding='utf-8') as f: json.dump(user_data, f, ensure_ascii=False, indent=4)
+            return jsonify({'success': True})
+    return jsonify({'success': False, 'error': 'Dados incorretos.'})
 
 @app.route('/api/utilizador/apagar', methods=['POST'])
 def api_apagar_utilizador():
