@@ -18,9 +18,9 @@ HTML_TEMPLATE = """
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Atlas-Diagnostics PRO — Recuperação Segura</title>
+<title>Atlas-Diagnostics PRO — Recuperação por Pergunta de Segurança</title>
 <meta property="og:title" content="Atlas-Diagnostics — Sistema de Diagnóstico Clínico Profissional">
-<meta property="og:description" content="Avaliação cirúrgica com subpilares, recuperação avançada e gráfico de aranha duplo.">
+<meta property="og:description" content="Avaliação cirúrgica com subpilares, recuperação com perguntas de escolha e gráfico de aranha duplo.">
 <meta property="og:image" content="https://atlas-diagnostics.onrender.com/static/capa.png?v=2">
 <meta property="og:url" content="https://atlas-diagnostics.onrender.com/?v=2">
 <meta property="og:type" content="website">
@@ -67,6 +67,9 @@ body { background-color: var(--bg); color: var(--text); font-family: 'Inter', sa
     width: 100%;
 }
 .auth-input:focus { border-color: var(--gold); outline: none; }
+select.auth-input { color: #fff; cursor: pointer; }
+select.auth-input option { background: var(--card-bg); color: var(--text); }
+
 .btn-auth {
     background: linear-gradient(135deg, var(--gold), #b58a10);
     color: #000;
@@ -200,19 +203,23 @@ h1 { font-family: 'Cinzel', serif; color: var(--gold); font-size: 1.6rem; margin
         </div>
         <div id="authMsg" style="font-size:0.8rem; color:var(--red); text-align:center; min-height:16px;"></div>
         
-        <!-- CAMPOS DE LOGIN / REGISTO / RECUPERAÇÃO -->
+        <!-- CAMPOS DE AUTENTICAÇÃO -->
         <input type="text" id="authUsername" class="auth-input" placeholder="Nome de Utilizador" autocomplete="off">
-        <input type="email" id="authEmail" class="auth-input" placeholder="E-mail (opcional no registo/recuperação)" style="display:none;" autocomplete="off">
+        <input type="email" id="authEmail" class="auth-input" placeholder="E-mail (opcional)" style="display:none;" autocomplete="off">
         <input type="text" id="authSecret" class="auth-input" placeholder="Código Secreto PIN (opcional)" style="display:none;" autocomplete="off">
         
-        <div id="secPerguntaContainer" style="display:none; flex-direction:column; gap:8px;">
-            <input type="text" id="authPergunta" class="auth-input" placeholder="Pergunta de Segurança (ex: Livro favorito?)" autocomplete="off">
-            <input type="text" id="authResposta" class="auth-input" placeholder="Resposta à Pergunta" autocomplete="off">
+        <!-- SELETOR DE PERGUNTAS DE SEGURANÇA (1 de 3) -->
+        <div id="secPerguntaContainer" style="display:none; flex-direction:column; gap:6px;">
+            <label style="font-size:0.75rem; color:var(--muted);">Pergunta de Segurança:</label>
+            <select id="authSelectPergunta" class="auth-input">
+                <option value="1">Qual o livro que mais marcou a tua vida?</option>
+                <option value="2">Qual o nome da tua primeira mascote / animal de estimação?</option>
+                <option value="3">Qual a cidade onde passaste as tuas melhores férias?</option>
+            </select>
+            <input type="text" id="authResposta" class="auth-input" placeholder="Sua Resposta Secreta" autocomplete="off">
         </div>
 
         <input type="password" id="authPassword" class="auth-input" placeholder="Password" autocomplete="new-password">
-        
-        <!-- CAMPO EXCLUSIVO PARA CONFIRMAR NOVA PASSWORD -->
         <input type="password" id="authPasswordConfirm" class="auth-input" placeholder="Repita a Nova Password" style="display:none;" autocomplete="new-password">
 
         <button type="button" class="btn-auth" id="authBtnAction" onclick="fazerLogin()">Entrar na Conta</button>
@@ -319,7 +326,6 @@ let clientesData = [];
 let clienteAtualId = null;
 let sessaoAtualId = null;
 let myRadarChart = null;
-let recuperacaoValidada = false; // Estado para controlar se já passou na validação de recuperação
 
 const subNvlMapa = { baixo: 20, medio: 50, alto: 90 };
 
@@ -431,12 +437,10 @@ function switchTab(modo) {
     document.getElementById('authUsername').value = '';
     document.getElementById('authEmail').value = '';
     document.getElementById('authSecret').value = '';
-    document.getElementById('authPergunta').value = '';
     document.getElementById('authResposta').value = '';
     document.getElementById('authPassword').value = '';
     document.getElementById('authPasswordConfirm').value = '';
     document.getElementById('authMsg').innerText = '';
-    recuperacaoValidada = false;
 
     let emailField = document.getElementById('authEmail');
     let secretField = document.getElementById('authSecret');
@@ -461,24 +465,21 @@ function switchTab(modo) {
         secretField.style.display = 'block';
         secretField.placeholder = "Código Secreto PIN (opcional)";
         secContainer.style.display = 'flex';
-        document.getElementById('authPergunta').placeholder = "Pergunta de Segurança (ex: Livro favorito?)";
-        document.getElementById('authResposta').placeholder = "Resposta à Pergunta";
         pwdField.style.display = 'block';
         pwdField.placeholder = "Password";
         pwdConfirmField.style.display = 'none';
     } else {
-        // MODO RECUPERAÇÃO INICIAL
-        btn.innerText = "Validar Dados de Recuperação";
+        // MODO RECUPERAÇÃO
+        btn.innerText = "Validar e Recuperar Conta";
         btn.setAttribute('onclick', 'verificarRecuperacao()');
         emailField.style.display = 'block';
-        emailField.placeholder = "E-mail registado (se lembra)";
+        emailField.placeholder = "E-mail registado (opcional)";
         secretField.style.display = 'block';
-        secretField.placeholder = "Código Secreto PIN (se lembra)";
+        secretField.placeholder = "Código Secreto PIN (opcional)";
         secContainer.style.display = 'flex';
-        document.getElementById('authPergunta').placeholder = "Sua Pergunta de Segurança";
-        document.getElementById('authResposta').placeholder = "Sua Resposta de Segurança";
-        pwdField.style.display = 'none';
-        pwdConfirmField.style.display = 'none';
+        pwdField.style.display = 'block';
+        pwdField.placeholder = "Nova Password";
+        pwdConfirmField.style.display = 'block';
     }
 }
 
@@ -504,7 +505,7 @@ async function fazerSignup() {
     let u = document.getElementById('authUsername').value;
     let e = document.getElementById('authEmail').value;
     let s = document.getElementById('authSecret').value;
-    let q = document.getElementById('authPergunta').value;
+    let q = document.getElementById('authSelectPergunta').value;
     let r = document.getElementById('authResposta').value;
     let p = document.getElementById('authPassword').value;
 
@@ -513,7 +514,7 @@ async function fazerSignup() {
     let res = await fetch('/api/signup', { 
         method: 'POST', 
         headers:{'Content-Type':'application/json'}, 
-        body: JSON.stringify({username: u, email: e, secret: s, pergunta: q, resposta: r, password: p}) 
+        body: JSON.stringify({username: u, email: e, secret: s, pergunta_id: q, resposta: r, password: p}) 
     });
     let data = await res.json();
     if(data.success) { alert("Conta criada com sucesso!"); switchTab('login'); }
@@ -524,63 +525,27 @@ async function verificarRecuperacao() {
     let u = document.getElementById('authUsername').value;
     let e = document.getElementById('authEmail').value;
     let s = document.getElementById('authSecret').value;
-    let q = document.getElementById('authPergunta').value;
+    let q = document.getElementById('authSelectPergunta').value;
     let r = document.getElementById('authResposta').value;
-
-    if(!u) { document.getElementById('authMsg').innerText = "Insira pelo menos o Nome de Utilizador."; return; }
-
-    let res = await fetch('/api/recuperar/verificar', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({username: u, email: e, secret: s, pergunta: q, resposta: r})
-    });
-    let data = await res.json();
-
-    if(data.success) {
-        recuperacaoValidada = true;
-        document.getElementById('authMsg').style.color = "var(--green)";
-        document.getElementById('authMsg').innerText = "✅ Validação bem-sucedida! Dados encontrados.";
-        
-        // Mostrar os dados validados ao utilizador
-        alert(`🔍 Dados encontrados para o utilizador: ${data.dados.username}\n• E-mail: ${data.dados.email || 'Não definido'}\n• Código PIN: ${data.dados.secret ? 'Definido (Oculto)' : 'Não definido'}\n• Pergunta: ${data.dados.pergunta || 'Não definida'}\n• Resposta: ${data.dados.resposta || 'Não definida'}`);
-
-        // Mudar para o passo de criar nova password
-        document.getElementById('authEmail').style.display = 'none';
-        document.getElementById('authSecret').style.display = 'none';
-        document.getElementById('secPerguntaContainer').style.display = 'none';
-        
-        document.getElementById('authPassword').style.display = 'block';
-        document.getElementById('authPassword').placeholder = "Nova Password";
-        document.getElementById('authPasswordConfirm').style.display = 'block';
-        
-        let btn = document.getElementById('authBtnAction');
-        btn.innerText = "Salvar Nova Password";
-        btn.setAttribute('onclick', 'salvarNovaPassword()');
-    } else {
-        document.getElementById('authMsg').style.color = "var(--red)";
-        document.getElementById('authMsg').innerText = data.error;
-    }
-}
-
-async function salvarNovaPassword() {
-    let u = document.getElementById('authUsername').value;
     let p1 = document.getElementById('authPassword').value;
     let p2 = document.getElementById('authPasswordConfirm').value;
 
+    if(!u) { document.getElementById('authMsg').innerText = "Insira o Nome de Utilizador."; return; }
     if(!p1 || !p2) { document.getElementById('authMsg').innerText = "Preencha a nova password em ambos os campos."; return; }
     if(p1 !== p2) { document.getElementById('authMsg').innerText = "As passwords não coincidem!"; return; }
 
-    let res = await fetch('/api/recuperar/salvar', {
+    let res = await fetch('/api/recuperar', {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({username: u, password: p1})
+        body: JSON.stringify({username: u, email: e, secret: s, pergunta_id: q, resposta: r, password: p1})
     });
     let data = await res.json();
 
     if(data.success) {
-        alert("🔑 Password redefinida com sucesso! Podes fazer login.");
+        alert(`🔑 Sucesso absoluto!\n• Utilizador: ${data.dados.username}\n• E-mail: ${data.dados.email || 'N/A'}\n• Pergunta Escolhida: ${data.dados.pergunta_texto}\n• Resposta Validada com Sucesso!\n\nA tua nova password foi gravada.`);
         switchTab('login');
     } else {
+        document.getElementById('authMsg').style.color = "var(--red)";
         document.getElementById('authMsg').innerText = data.error;
     }
 }
@@ -607,9 +572,9 @@ function initGrid() {
             <div class="pilar-title">${p.nome}</div>`;
         
         p.subpilares.forEach(sp => {
-            let safeDesc = (sp.desc || '').replace(/'/g, "'");
-            let safeEx = (sp.ex || '').replace(/'/g, "'");
-            let safeNome = sp.nome.replace(/'/g, "'");
+            let safeDesc = (sp.desc || '').replace(/'/g, "&#39;");
+            let safeEx = (sp.ex || '').replace(/'/g, "&#39;");
+            let safeNome = sp.nome.replace(/'/g, "&#39;");
 
             let btn1 = "Baixo", btn2 = "Médio", btn3 = "Alto";
             if(sp.tipo === 'sintoma') {
@@ -1001,7 +966,7 @@ def api_signup():
         'username': u,
         'email': data.get('email', '').strip(),
         'secret': hash_password(data.get('secret', '').strip()) if data.get('secret') else '',
-        'pergunta': data.get('pergunta', '').strip(),
+        'pergunta_id': data.get('pergunta_id', '1'),
         'resposta': hash_password(data.get('resposta', '').strip().lower()) if data.get('resposta') else '',
         'password': hash_password(p),
         'clientes': []
@@ -1021,8 +986,8 @@ def api_login():
             return jsonify({'success': True})
     return jsonify({'success': False, 'error': 'Credenciais inválidas.'})
 
-@app.route('/api/recuperar/verificar', methods=['POST'])
-def api_recuperar_verificar():
+@app.route('/api/recuperar', methods=['POST'])
+def api_recuperar():
     data = request.json
     u = data.get('username')
     user_file = os.path.join(DATA_DIR, f"{u}.json")
@@ -1032,46 +997,43 @@ def api_recuperar_verificar():
     
     e = data.get('email', '').strip()
     s = data.get('secret', '').strip()
+    q_id = data.get('pergunta_id', '1')
     r = data.get('resposta', '').strip().lower()
+    p_nova = data.get('password')
 
-    # Validação inteligente: pelo menos um dos métodos de segurança fornecidos tem de coincidir, ou o utilizador se lembra
+    perguntas_map = {
+        "1": "Qual o livro que mais marcou a tua vida?",
+        "2": "Qual o nome da tua primeira mascote / animal de estimação?",
+        "3": "Qual a cidade onde passaste as tuas melhores férias?"
+    }
+
     match = False
+    # Validação por E-mail
     if e and user_data.get('email') and user_data.get('email').lower() == e.lower():
         match = True
-    if s and user_data.get('secret') and user_data.get('secret') == hash_password(s):
+    # Validação por PIN Secreto
+    elif s and user_data.get('secret') and user_data.get('secret') == hash_password(s):
         match = True
-    if r and user_data.get('resposta') and user_data.get('resposta') == hash_password(r):
+    # Validação por Pergunta e Resposta de Segurança
+    elif r and user_data.get('resposta') and user_data.get('pergunta_id') == q_id and user_data.get('resposta') == hash_password(r):
         match = True
 
-    if not match and not (not e and not s and not r):
-        return jsonify({'success': False, 'error': 'Os dados de recuperação inseridos não coincidem com os registados.'})
+    if not match:
+        return jsonify({'success': False, 'error': 'Validação falhou. A resposta à pergunta, e-mail ou PIN não coincidem.'})
 
-    # Se passar, devolve os dados para mostrar ao utilizador
+    # Atualizar password
+    user_data['password'] = hash_password(p_nova)
+    with open(user_file, 'w', encoding='utf-8') as f:
+        json.dump(user_data, f, ensure_ascii=False, indent=4)
+
     return jsonify({
         'success': True,
         'dados': {
             'username': user_data.get('username'),
             'email': user_data.get('email'),
-            'secret': user_data.get('secret'),
-            'pergunta': user_data.get('pergunta'),
-            'resposta': user_data.get('resposta')
+            'pergunta_texto': perguntas_map.get(user_data.get('pergunta_id', '1'), 'N/A')
         }
     })
-
-@app.route('/api/recuperar/salvar', methods=['POST'])
-def api_recuperar_salvar():
-    data = request.json
-    u, p = data.get('username'), data.get('password')
-    user_file = os.path.join(DATA_DIR, f"{u}.json")
-    if not os.path.exists(user_file): return jsonify({'success': False, 'error': 'Utilizador não encontrado.'})
-    
-    with open(user_file, 'r', encoding='utf-8') as f: user_data = json.load(f)
-    user_data['password'] = hash_password(p)
-    
-    with open(user_file, 'w', encoding='utf-8') as f:
-        json.dump(user_data, f, ensure_ascii=False, indent=4)
-        
-    return jsonify({'success': True})
 
 @app.route('/api/utilizador/apagar', methods=['POST'])
 def api_apagar_utilizador():
