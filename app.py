@@ -18,11 +18,13 @@ HTML_TEMPLATE = """
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Oráculo Causal v11 PRO — Diagnóstico Sistémico</title>
-<!-- Metatags para pré-visualização bonita (Open Graph / Imagem de Capa) -->
-<meta property="meta:title" content="Oráculo Causal v11 PRO — Sistema de Diagnóstico">
-<meta property="meta:description" content="Engenharia de vida, balanço de energia e gestão causal de pacientes.">
-<meta property="og:image" content="/static/capa.png">
+<title>Atlas-Diagnostics — Diagnóstico Sistémico</title>
+<!-- Metatags corrigidas para pré-visualização bonita (Open Graph / Imagem de Capa) -->
+<meta property="og:title" content="Atlas-Diagnostics — Sistema de Diagnóstico">
+<meta property="og:description" content="Engenharia de vida, balanço de energia e gestão de sessões de pacientes.">
+<meta property="og:image" content="https://atlas-diagnostics.onrender.com/static/capa.png">
+<meta property="og:url" content="https://atlas-diagnostics.onrender.com">
+<meta property="og:type" content="website">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -131,7 +133,7 @@ h1 { font-family: 'Cinzel', serif; color: var(--gold); font-size: 1.5rem; margin
 <div class="container">
     <!-- ECRÃ DE AUTENTICAÇÃO (Blindado contra autofill do Chrome) -->
     <div id="authScreen">
-        <h2 style="font-family:'Cinzel',serif; color:var(--gold); text-align:center;">Oráculo Causal PRO</h2>
+        <h2 style="font-family:'Cinzel',serif; color:var(--gold); text-align:center;">Atlas-Diagnostics</h2>
         <div class="tab-row">
             <button type="button" class="tab-btn active" onclick="switchTab('login')">Entrar (Login)</button>
             <button type="button" class="tab-btn" onclick="switchTab('signup')">Criar Conta</button>
@@ -148,7 +150,7 @@ h1 { font-family: 'Cinzel', serif; color: var(--gold); font-size: 1.5rem; margin
     <div id="appScreen">
         <header>
             <span style="font-size:0.75rem; letter-spacing:2px; color:var(--gold); text-transform:uppercase;">Sistema Multi-Sessão & JSON</span>
-            <h1>O Relógio dos 12 Pilares</h1>
+            <h1>Atlas-Diagnostics PRO</h1>
             <p style="font-size:0.8rem; color:var(--muted); margin-top:5px;">Utilizador: <strong id="lblUserLogged" style="color:var(--gold);"></strong> | <a href="#" onclick="fazerLogout()" style="color:var(--blue);">Terminar Sessão</a> | <a href="#" onclick="apagarContaUtilizador()" style="color:var(--red);">Apagar a Minha Conta</a></p>
         </header>
 
@@ -536,7 +538,7 @@ def api_salvar_sessao():
             s['projeto'] = data.get('projeto')
             s['pilares'] = data.get('pilares')
             break
-    with open(user_file, 'w', encoding='utf-8`') as f:
+    with open(user_file, 'w', encoding='utf-8') as f:
         json.dump(user_data, f, ensure_ascii=False, indent=4)
     return jsonify({'success': True})
 
