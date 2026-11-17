@@ -18,13 +18,15 @@ HTML_TEMPLATE = """
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Atlas-Diagnostics PRO — Diagnóstico Sistémico</title>
-<meta property="og:title" content="Atlas-Diagnostics — Sistema de Diagnóstico e Sessões">
-<meta property="og:description" content="Gestão avançada de pacientes, 12 pilares sistémicos, relatórios e evolução clínica.">
+<title>Atlas-Diagnostics PRO — Diagnóstico Sistémico Avançado</title>
+<meta property="og:title" content="Atlas-Diagnostics — Sistema de Diagnóstico, Raio-X e Gráficos">
+<meta property="og:description" content="Gestão clínica avançada com 12 pilares, subcategorias de raio-x, gráfico de aranha e relatórios PDF.">
 <meta property="og:image" content="https://atlas-diagnostics.onrender.com/static/capa.png">
 <meta property="og:url" content="https://atlas-diagnostics.onrender.com">
 <meta property="og:type" content="website">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- Chart.js para o Gráfico de Aranha -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
 :root {
     --bg: #080a0f;
@@ -40,11 +42,11 @@ HTML_TEMPLATE = """
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { background-color: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; padding: 20px; display: flex; justify-content: center; }
-.container { width: 100%; max-width: 1000px; display: flex; flex-direction: column; gap: 20px; }
+.container { width: 100%; max-width: 1100px; display: flex; flex-direction: column; gap: 20px; }
 
 #authScreen {
     max-width: 420px;
-    margin: 60px auto;
+    margin: 40px auto;
     background: var(--card-bg);
     border: 1px solid var(--gold);
     border-radius: 16px;
@@ -76,8 +78,8 @@ body { background-color: var(--bg); color: var(--text); font-family: 'Inter', sa
     cursor: pointer;
     font-size: 1rem;
 }
-.tab-row { display: flex; gap: 10px; margin-bottom: 10px; }
-.tab-btn { flex: 1; background: transparent; border: 1px solid var(--border); color: var(--muted); padding: 8px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+.tab-row { display: flex; gap: 6px; margin-bottom: 5px; }
+.tab-btn { flex: 1; background: transparent; border: 1px solid var(--border); color: var(--muted); padding: 7px; border-radius: 6px; cursor: pointer; font-size: 0.78rem; font-weight: 600; }
 .tab-btn.active { border-color: var(--gold); color: var(--gold); background: var(--gold-glow); }
 
 header { text-align: center; padding: 20px; background: var(--card-bg); border: 1px solid var(--gold); border-radius: 16px; }
@@ -111,7 +113,7 @@ h1 { font-family: 'Cinzel', serif; color: var(--gold); font-size: 1.6rem; margin
 .btn-danger { background: rgba(239, 68, 68, 0.15); border-color: var(--red); color: var(--red); }
 .btn-danger:hover { background: var(--red); color: #fff; }
 
-.grid-pilares { display: grid; grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); gap: 16px; }
+.grid-pilares { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
 .pilar-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 10px; }
 .pilar-title { font-family: 'Cinzel', serif; font-size: 0.95rem; color: var(--gold); }
 .options-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
@@ -119,8 +121,12 @@ h1 { font-family: 'Cinzel', serif; color: var(--gold); font-size: 1.6rem; margin
 .opt-btn.active-am { background: rgba(212, 175, 55, 0.25); border-color: var(--gold); color: var(--gold); font-weight: bold; }
 .opt-btn.active-dd { background: rgba(239, 68, 68, 0.25); border-color: var(--red); color: #fca5a5; font-weight: bold; }
 
+.raiox-quest { font-size: 0.78rem; color: var(--blue); font-style: italic; background: rgba(56, 189, 248, 0.08); padding: 6px 8px; border-radius: 6px; border-left: 2px solid var(--blue); }
+
 .report-box { background: rgba(0,0,0,0.5); border: 1px solid var(--border); border-radius: 10px; padding: 15px; font-size: 0.88rem; line-height: 1.5; color: var(--muted); }
 .report-box h3 { color: var(--gold); font-family: 'Cinzel', serif; margin-bottom: 8px; }
+
+.chart-container { position: relative; width: 100%; max-width: 550px; margin: 0 auto; height: 380px; background: rgba(0,0,0,0.3); border-radius: 12px; padding: 15px; border: 1px solid var(--border); }
 </style>
 </head>
 <body>
@@ -130,19 +136,23 @@ h1 { font-family: 'Cinzel', serif; color: var(--gold); font-size: 1.6rem; margin
     <div id="authScreen">
         <h2 style="font-family:'Cinzel',serif; color:var(--gold); text-align:center;">Atlas-Diagnostics</h2>
         <div class="tab-row">
-            <button type="button" class="tab-btn active" onclick="switchTab('login')">Entrar (Login)</button>
-            <button type="button" class="tab-btn" onclick="switchTab('signup')">Criar Conta</button>
+            <button type="button" class="tab-btn active" onclick="switchTab('login')">Entrar</button>
+            <button type="button" class="tab-btn" onclick="switchTab('signup')">Registar</button>
+            <button type="button" class="tab-btn" onclick="switchTab('recover')">Recuperar</button>
         </div>
         <div id="authMsg" style="font-size:0.8rem; color:var(--red); text-align:center; min-height:16px;"></div>
+        
         <input type="text" id="authUsername" class="auth-input" placeholder="Nome de Utilizador" autocomplete="off">
-        <input type="password" id="authPassword" class="auth-input" placeholder="Password" autocomplete="new-password">
+        <input type="email" id="authEmail" class="auth-input" placeholder="E-mail" style="display:none;" autocomplete="off">
+        <input type="password" id="authPassword" class="auth-input" placeholder="Password / Nova Password" autocomplete="new-password">
+        
         <button type="button" class="btn-auth" id="authBtnAction" onclick="fazerLogin()">Entrar na Conta</button>
     </div>
 
     <!-- ECRÃ PRINCIPAL -->
     <div id="appScreen">
         <header>
-            <span style="font-size:0.75rem; letter-spacing:2px; color:var(--gold); text-transform:uppercase;">Plataforma Clínica & Sistémica</span>
+            <span style="font-size:0.75rem; letter-spacing:2px; color:var(--gold); text-transform:uppercase;">Plataforma Clínica & Sistémica Avançada</span>
             <h1>Atlas-Diagnostics PRO</h1>
             <p style="font-size:0.8rem; color:var(--muted); margin-top:5px;">Terapeuta/Médico: <strong id="lblUserLogged" style="color:var(--gold);"></strong> | <a href="#" onclick="fazerLogout()" style="color:var(--blue);">Terminar Sessão</a> | <a href="#" onclick="apagarContaUtilizador()" style="color:var(--red);">Apagar Conta</a></p>
         </header>
@@ -184,9 +194,16 @@ h1 { font-family: 'Cinzel', serif; color: var(--gold); font-size: 1.6rem; margin
             </div>
         </div>
 
-        <!-- GRINHA DOS 12 PILARES -->
+        <!-- ESPAÇO DE TRABALHO DOS PILARES E GRÁFICO -->
         <div id="workspaceArea" style="display:none; flex-direction:column; gap:20px;">
-            <div class="grid-pilares" id="pilaresGrid"></div>
+            
+            <!-- GRÁFICO DE ARANHA (RADAR) -->
+            <div class="panel">
+                <span style="font-family:'Cinzel',serif; color:var(--gold); font-size:1.05rem; text-align:center;">🕸️ Gráfico de Aranha — Equilíbrio dos 12 Pilares (Energia Atual vs Peso)</span>
+                <div class="chart-container">
+                    <canvas id="radarChart"></canvas>
+                </div>
+            </div>
 
             <!-- AVALIAÇÃO DE IMPACTO GERAL NO DIA -->
             <div class="panel">
@@ -198,6 +215,9 @@ h1 { font-family: 'Cinzel', serif; color: var(--gold); font-size: 1.6rem; margin
                 <input type="range" id="rangeImpacto" min="0" max="100" value="50" style="accent-color: var(--gold);" oninput="document.getElementById('lblImpactoVal').innerText = this.value + '%'">
             </div>
 
+            <!-- GRIlha DOS 12 PILARES COM RAIO-X DE QUESTÕES -->
+            <div class="grid-pilares" id="pilaresGrid"></div>
+
             <!-- BOTÕES DE AÇÃO E CÁLCULO -->
             <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:12px;">
                 <div style="display:flex; gap:10px; flex-wrap:wrap;">
@@ -206,7 +226,7 @@ h1 { font-family: 'Cinzel', serif; color: var(--gold); font-size: 1.6rem; margin
                 </div>
                 <div style="display:flex; gap:10px; flex-wrap:wrap;">
                     <button type="button" class="pro-btn btn-danger" onclick="apagarSessaoAtual()">🗑️ Apagar Sessão</button>
-                    <button type="button" class="pro-btn" onclick="exportarPDFSessao()">📄 Exportar PDF da Sessão</button>
+                    <button type="button" class="pro-btn" onclick="exportarPDFSessao()">📄 Exportar PDF da Sessão & Gráfico</button>
                     <button type="button" class="pro-btn" onclick="exportarPDFMacro()">📊 Exportar PDF Macro (Evolução)</button>
                 </div>
             </div>
@@ -214,7 +234,7 @@ h1 { font-family: 'Cinzel', serif; color: var(--gold); font-size: 1.6rem; margin
             <!-- RELATÓRIO, RAIO-X E CONSELHO -->
             <div class="panel" id="relatorioPanel" style="display:none;">
                 <div class="report-box">
-                    <h3>🔍 Relatório de Raio-X Sistémico</h3>
+                    <h3>🔍 Relatório de Raio-X Sistémico & Diagnóstico</h3>
                     <div id="txtRaioX" style="margin-bottom: 12px; color: #fff;"></div>
                     <h3>💡 Conselho Terapêutico & Direção Causal</h3>
                     <div id="txtConselho" style="color: var(--gold);"></div>
@@ -229,21 +249,22 @@ let currentUser = null;
 let clientesData = [];
 let clienteAtualId = null;
 let sessaoAtualId = null;
+let myRadarChart = null;
 const nvlMapa = { mau: 10, razoavel: 30, normal: 50, bom: 75, excelente: 95 };
 
 const pilaresDef = [
-    { id: 1, nome: "1. Sono e Descanso", amDef: "razoavel", ddDef: "bom" },
-    { id: 2, nome: "2. Dinheiro e Contas", amDef: "mau", ddDef: "excelente" },
-    { id: 3, nome: "3. Trabalho e Projetos", amDef: "bom", ddDef: "bom" },
-    { id: 4, nome: "4. Família e Casa", amDef: "mau", ddDef: "bom" },
-    { id: 5, nome: "5. Cabeça e Concentração", amDef: "excelente", ddDef: "excelente" },
-    { id: 6, nome: "6. Ideias e Aprendizagem", amDef: "razoavel", ddDef: "normal" },
-    { id: 7, nome: "7. Casa e Espaço à Volta", amDef: "razoavel", ddDef: "bom" },
-    { id: 8, nome: "8. Amigos e Apoio", amDef: "bom", ddDef: "bom" },
-    { id: 9, nome: "9. Organização do Tempo", amDef: "mau", ddDef: "bom" },
-    { id: 10, nome: "10. Planos para o Futuro", amDef: "excelente", ddDef: "bom" },
-    { id: 11, nome: "11. Saúde e Corpo", amDef: "razoavel", ddDef: "bom" },
-    { id: 12, nome: "12. Paz Interior e Valores", amDef: "bom", ddDef: "normal" }
+    { id: 1, nome: "1. Sono e Descanso", quest: "Acorda recuperado? Quantas horas de sono profundo real tem?", amDef: "razoavel", ddDef: "bom" },
+    { id: 2, nome: "2. Dinheiro e Contas", quest: "As dívidas ou falta de fluxo geram ansiedade diária ou bloqueio?", amDef: "mau", ddDef: "excelente" },
+    { id: 3, nome: "3. Trabalho e Projetos", quest: "Sente realização ou apenas esgotamento mecânico nas tarefas?", amDef: "bom", ddDef: "bom" },
+    { id: 4, nome: "4. Família e Casa", quest: "O ambiente familiar nutre a sua energia ou drena a sua paz?", amDef: "mau", ddDef: "bom" },
+    { id: 5, nome: "5. Cabeça e Concentração", q: "Consegue focar-se sem distrações crónicas ou ruminação mental?", amDef: "excelente", ddDef: "excelente" },
+    { id: 6, nome: "6. Ideias e Aprendizagem", quest: "Está a alimentar a mente com novos conhecimentos ou estagnado?", amDef: "razoavel", ddDef: "normal" },
+    { id: 7, nome: "7. Casa e Espaço à Volta", quest: "O seu espaço físico está limpo e organizado ou caótico?", amDef: "razoavel", ddDef: "bom" },
+    { id: 8, nome: "8. Amigos e Apoio", quest: "Tem com quem contar verdadeiramente nos momentos de crise?", amDef: "bom", ddDef: "bom" },
+    { id: 9, nome: "9. Organização do Tempo", quest: "Controla o seu calendário ou é atropelado pelas urgências?", amDef: "mau", ddDef: "bom" },
+    { id: 10, nome: "10. Planos para o Futuro", quest: "Tem uma direção clara para os próximos 1 a 3 anos?", amDef: "excelente", ddDef: "bom" },
+    { id: 11, nome: "11. Saúde e Corpo", quest: "Alimentação, exercício e vitalidade física estão em harmonia?", amDef: "razoavel", ddDef: "bom" },
+    { id: 12, nome: "12. Paz Interior e Valores", q: "Vive alinhado com o que defende ou cedeu perante a pressão?", amDef: "bom", ddDef: "normal" }
 ];
 
 function switchTab(modo) {
@@ -251,14 +272,23 @@ function switchTab(modo) {
     event.target.classList.add('active');
     const btn = document.getElementById('authBtnAction');
     document.getElementById('authUsername').value = '';
+    document.getElementById('authEmail').value = '';
     document.getElementById('authPassword').value = '';
     document.getElementById('authMsg').innerText = '';
+    
+    let emailField = document.getElementById('authEmail');
     if(modo === 'login') {
         btn.innerText = "Entrar na Conta";
         btn.setAttribute('onclick', 'fazerLogin()');
-    } else {
+        emailField.style.display = 'none';
+    } else if(modo === 'signup') {
         btn.innerText = "Registar Conta";
         btn.setAttribute('onclick', 'fazerSignup()');
+        emailField.style.display = 'block';
+    } else {
+        btn.innerText = "Redefinir Password";
+        btn.setAttribute('onclick', 'fazerRecuperacao()');
+        emailField.style.display = 'block';
     }
 }
 
@@ -282,11 +312,23 @@ async function fazerLogin() {
 
 async function fazerSignup() {
     let u = document.getElementById('authUsername').value;
+    let e = document.getElementById('authEmail').value;
     let p = document.getElementById('authPassword').value;
-    if(!u || !p) { document.getElementById('authMsg').innerText = "Preencha todos os campos."; return; }
-    let res = await fetch('/api/signup', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username: u, password: p}) });
+    if(!u || !e || !p) { document.getElementById('authMsg').innerText = "Preencha todos os campos."; return; }
+    let res = await fetch('/api/signup', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username: u, email: e, password: p}) });
     let data = await res.json();
     if(data.success) { alert("Conta criada com sucesso!"); switchTab('login'); }
+    else { document.getElementById('authMsg').innerText = data.error; }
+}
+
+async function fazerRecuperacao() {
+    let u = document.getElementById('authUsername').value;
+    let e = document.getElementById('authEmail').value;
+    let p = document.getElementById('authPassword').value;
+    if(!u || !e || !p) { document.getElementById('authMsg').innerText = "Preencha todos os campos."; return; }
+    let res = await fetch('/api/recuperar', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username: u, email: e, password: p}) });
+    let data = await res.json();
+    if(data.success) { alert("🔑 Password redefinida com sucesso!"); switchTab('login'); }
     else { document.getElementById('authMsg').innerText = data.error; }
 }
 
@@ -297,7 +339,7 @@ function fazerLogout() {
 }
 
 async function apagarContaUtilizador() {
-    if(!confirm("⚠️ Deseja apagar permanentemente a sua conta e todos os dados?")) return;
+    if(!confirm("⚠️ Deseja apagar permanentemente a sua conta?")) return;
     let res = await fetch('/api/utilizador/apagar', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username: currentUser}) });
     let data = await res.json();
     if(data.success) { alert("Conta apagada."); fazerLogout(); }
@@ -307,10 +349,12 @@ function initGrid() {
     const grid = document.getElementById('pilaresGrid');
     let html = '';
     pilaresDef.forEach(p => {
+        let qText = p.quest || p.q || '';
         html += `
         <div class="pilar-card">
             <div class="pilar-title">${p.nome}</div>
-            <div style="font-size:0.75rem; color:var(--muted);">Energia Atual (AM):</div>
+            <div class="raiox-quest">🔍 Raio-X: ${qText}</div>
+            <div style="font-size:0.75rem; color:var(--muted); margin-top:2px;">Energia Atual (AM):</div>
             <div class="options-row" id="row_am_${p.id}">
                 <button type="button" data-nvl="mau" class="opt-btn" onclick="selecionarNivel(${p.id}, 'am', 'mau', this)">Esgotada</button>
                 <button type="button" data-nvl="razoavel" class="opt-btn" onclick="selecionarNivel(${p.id}, 'am', 'razoavel', this)">Fraca</button>
@@ -338,6 +382,7 @@ function selecionarNivel(id, tipo, nivel, btn) {
     const row = btn.parentElement;
     Array.from(row.children).forEach(b => b.classList.remove(tipo === 'am' ? 'active-am' : 'active-dd'));
     btn.classList.add(tipo === 'am' ? 'active-am' : 'active-dd');
+    atualizarGraficoAranha();
 }
 
 async function carregarDadosUtilizador() {
@@ -354,7 +399,7 @@ function atualizarSelectClientes() {
         html += `<option value="${c.id}">${c.nome} (${c.idade || '?'} anos)</option>`;
     });
     sel.innerHTML = html;
-    document.getElementById('selectSessao.innerHTML') = '<option value="">Selecione sessão...</option>';
+    document.getElementById('selectSessao').innerHTML = '<option value="">Selecione sessão...</option>';
     document.getElementById('fichaClienteContainer').style.display = 'none';
     document.getElementById('workspaceArea').style.display = 'none';
 }
@@ -417,7 +462,7 @@ async function atualizarFichaCliente() {
 }
 
 async function apagarClienteAtual() {
-    if(!clienteAtualId || !confirm("⚠️ Deseja apagar este cliente e todo o seu histórico de sessões?")) return;
+    if(!clienteAtualId || !confirm("⚠️ Deseja apagar este cliente e respetivo histórico?")) return;
     let res = await fetch('/api/cliente/apagar', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username: currentUser, cliente_id: clienteAtualId}) });
     let data = await res.json();
     if(data.success) { await carregarDadosUtilizador(); alert("Cliente apagado."); }
@@ -460,6 +505,7 @@ function carregarSessaoSelecionada(sessaoId) {
 
     document.getElementById('workspaceArea').style.display = 'flex';
     document.getElementById('relatorioPanel').style.display = 'none';
+    criarOuAtualizarGraficoAranha();
 }
 
 function atualizarBotaoVisual(pilarId, tipo, valor) {
@@ -472,6 +518,64 @@ function atualizarBotaoVisual(pilarId, tipo, valor) {
             b.classList.add(tipo === 'am' ? 'active-am' : 'active-dd');
         }
     });
+}
+
+function criarOuAtualizarGraficoAranha() {
+    let amData = pilaresDef.map(p => parseInt(document.getElementById(`val_am_${p.id}`).value));
+    let ddData = pilaresDef.map(p => parseInt(document.getElementById(`val_dd_${p.id}`).value));
+    let labels = pilaresDef.map(p => p.nome.split('. ')[1]);
+
+    let ctx = document.getElementById('radarChart').getContext('2d');
+    if(myRadarChart) {
+        myRadarChart.data.datasets[0].data = amData;
+        myRadarChart.data.datasets[1].data = ddData;
+        myRadarChart.update();
+    } else {
+        myRadarChart = new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Energia Atual (AM)',
+                        data: amData,
+                        backgroundColor: 'rgba(212, 175, 55, 0.2)',
+                        borderColor: '#d4af37',
+                        borderWidth: 2,
+                        pointBackgroundColor: '#d4af37'
+                    },
+                    {
+                        label: 'Peso / Problema (DD)',
+                        data: ddData,
+                        backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                        borderColor: '#ef4444',
+                        borderWidth: 2,
+                        pointBackgroundColor: '#ef4444'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                        angleLines: { color: 'rgba(255, 255, 255, 0.1)' },
+                        ticks: { display: false, max: 100, min: 0 }
+                    }
+                },
+                plugins: { legend: { labels: { color: '#f1f5f9', font: { family: 'Inter', size: 11 } } } }
+            }
+        });
+    }
+}
+
+function atualizarGraficoAranha() {
+    if(myRadarChart) {
+        myRadarChart.data.datasets[0].data = pilaresDef.map(p => parseInt(document.getElementById(`val_am_${p.id}`).value));
+        myRadarChart.data.datasets[1].data = pilaresDef.map(p => parseInt(document.getElementById(`val_dd_${p.id}`).value));
+        myRadarChart.update();
+    }
 }
 
 async function guardarSessaoAtual() {
@@ -532,18 +636,26 @@ function calcularResultadoRaioX() {
 
 function exportarPDFSessao() {
     let cliente = clientesData.find(c => c.id === clienteAtualId);
+    let chartCanvas = document.getElementById('radarChart');
+    let chartImage = chartCanvas.toDataURL('image/png');
+
     let jan = window.open('', '_blank');
-    jan.document.write(`<html><head><title>Relatório de Sessão</title><style>body{font-family:sans-serif;padding:30px;color:#000;}</style></head><body>`);
-    jan.document.write(`<h1>Atlas-Diagnostics — Relatório de Sessão</h1>`);
+    jan.document.write(`<html><head><title>Relatório Clínico & Gráfico</title><style>body{font-family:sans-serif;padding:30px;color:#000;} table{width:100%;border-collapse:collapse;margin-top:15px;} th,td{border:1px solid #ccc;padding:8px;text-align:left;font-size:0.85rem;} th{background:#f4f4f4;}</style></head><body>`);
+    jan.document.write(`<h1>Atlas-Diagnostics — Relatório de Sessão & Gráfico Aranha</h1>`);
     jan.document.write(`<p><strong>Cliente:</strong> ${cliente.nome} | <strong>Idade:</strong> ${cliente.idade || 'N/A'}</p>`);
     jan.document.write(`<p><strong>Objetivo:</strong> ${cliente.objetivo || 'N/A'}</p><hr>`);
-    jan.document.write(`<h3>Avaliação dos 12 Pilares:</h3><ul>`);
+    
+    jan.document.write(`<div style="text-align:center; margin:20px 0;"><img src="${chartImage}" style="max-width:400px;"/></div>`);
+    
+    jan.document.write(`<h3>Tabela de Avaliação dos 12 Pilares:</h3>`);
+    jan.document.write(`<table><tr><th>Pilar Sistémico</th><th>Questão Raio-X</th><th>Energia (AM)</th><th>Peso (DD)</th></tr>`);
     pilaresDef.forEach(p => {
         let am = document.getElementById(`val_am_${p.id}`).value;
         let dd = document.getElementById(`val_dd_${p.id}`).value;
-        jan.document.write(`<li><strong>${p.nome}</strong> — Energia (AM): ${am} | Peso (DD): ${dd}</li>`);
+        let q = p.quest || p.q || '';
+        jan.document.write(`<tr><td><strong>${p.nome}</strong></td><td><em>${q}</em></td><td>${am}</td><td>${dd}</td></tr>`);
     });
-    jan.document.write(`</ul><br><button onclick="window.print()">Imprimir / Guardar PDF</button></body></html>`);
+    jan.document.write(`</table><br><button onclick="window.print()" style="padding:10px 20px;background:#d4af37;border:none;font-weight:bold;cursor:pointer;">Imprimir / Guardar PDF</button></body></html>`);
     jan.document.close();
 }
 
@@ -552,12 +664,12 @@ function exportarPDFMacro() {
     let jan = window.open('', '_blank');
     jan.document.write(`<html><head><title>Relatório Macro de Evolução</title><style>body{font-family:sans-serif;padding:30px;color:#000;}</style></head><body>`);
     jan.document.write(`<h1>Atlas-Diagnostics — Relatório Macro de Progressão</h1>`);
-    jan.document.write(`<p><strong>Cliente:</strong> ${cliente.nome} | <strong>Total de Sessões Registadas:</strong> ${cliente.sessoes.length}</p><hr>`);
+    jan.document.write(`<p><strong>Cliente:</strong> ${cliente.nome} | <strong>Total de Sessões:</strong> ${cliente.sessoes.length}</p><hr>`);
     cliente.sessoes.forEach((s, idx) => {
         jan.document.write(`<h3>Sessão #${idx + 1} — ${s.titulo} (${s.data || 'N/A'})</h3>`);
         jan.document.write(`<p>Impacto Diário: ${s.impacto || 50}%</p>`);
     });
-    jan.document.write(`<br><button onclick="window.print()">Imprimir / Guardar PDF Macro</button></body></html>`);
+    jan.document.write(`<br><button onclick="window.print()" style="padding:10px 20px;background:#d4af37;border:none;font-weight:bold;cursor:pointer;">Imprimir / Guardar PDF Macro</button></body></html>`);
     jan.document.close();
 }
 </script>
@@ -572,12 +684,12 @@ def index():
 @app.route('/api/signup', methods=['POST'])
 def api_signup():
     data = request.json
-    u, p = data.get('username'), data.get('password')
-    if not u or not p: return jsonify({'success': False, 'error': 'Preencha todos os campos.'})
+    u, e, p = data.get('username'), data.get('email'), data.get('password')
+    if not u or not e or not p: return jsonify({'success': False, 'error': 'Preencha todos os campos.'})
     user_file = os.path.join(DATA_DIR, f"{u}.json")
     if os.path.exists(user_file): return jsonify({'success': False, 'error': 'Utilizador já existe.'})
     with open(user_file, 'w', encoding='utf-8') as f:
-        json.dump({'password': hash_password(p), 'clientes': []}, f, ensure_ascii=False, indent=4)
+        json.dump({'email': e, 'password': hash_password(p), 'clientes': []}, f, ensure_ascii=False, indent=4)
     return jsonify({'success': True})
 
 @app.route('/api/login', methods=['POST'])
@@ -588,6 +700,18 @@ def api_login():
     if not os.path.exists(user_file): return jsonify({'success': False, 'error': 'Utilizador não encontrado.'})
     with open(user_file, 'r', encoding='utf-8') as f: user_data = json.load(f)
     if user_data['password'] != hash_password(p): return jsonify({'success': False, 'error': 'Password incorreta.'})
+    return jsonify({'success': True})
+
+@app.route('/api/recuperar', methods=['POST'])
+def api_recuperar():
+    data = request.json
+    u, e, p = data.get('username'), data.get('email'), data.get('password')
+    user_file = os.path.join(DATA_DIR, f"{u}.json")
+    if not os.path.exists(user_file): return jsonify({'success': False, 'error': 'Utilizador não encontrado.'})
+    with open(user_file, 'r', encoding='utf-8') as f: user_data = json.load(f)
+    if user_data.get('email') != e: return jsonify({'success': False, 'error': 'O e-mail não coincide.'})
+    user_data['password'] = hash_password(p)
+    with open(user_file, 'w', encoding='utf-8') as f: json.dump(user_data, f, ensure_ascii=False, indent=4)
     return jsonify({'success': True})
 
 @app.route('/api/utilizador/apagar', methods=['POST'])
@@ -612,7 +736,6 @@ def api_criar_cliente():
     u = data.get('username')
     user_file = os.path.join(DATA_DIR, f"{u}.json")
     with open(user_file, 'r', encoding='utf-8') as f: user_data = json.load(f)
-    
     novo_cliente = {
         'id': f"cli_{int(os.urandom(3).hex(), 16)}",
         'nome': data.get('nome'),
@@ -655,7 +778,6 @@ def api_criar_sessao():
     u, cli_id = data.get('username'), data.get('cliente_id')
     user_file = os.path.join(DATA_DIR, f"{u}.json")
     with open(user_file, 'r', encoding='utf-8') as f: user_data = json.load(f)
-    
     sessao_id = f"ses_{int(os.urandom(3).hex(), 16)}"
     for c in user_data['clientes']:
         if c['id'] == cli_id:
@@ -672,7 +794,7 @@ def api_criar_sessao():
     return jsonify({'success': True, 'sessao': {'id': sessao_id}})
 
 @app.route('/api/sessao/salvar', methods=['POST'])
-def api_salvar_sessao():
+def api_sessao_salvar():
     data = request.json
     u, cli_id, ses_id = data.get('username'), data.get('cliente_id'), data.get('sessao_id')
     user_file = os.path.join(DATA_DIR, f"{u}.json")
@@ -688,7 +810,7 @@ def api_salvar_sessao():
     return jsonify({'success': True})
 
 @app.route('/api/sessao/apagar', methods=['POST'])
-def api_apagar_sessao():
+def api_sessao_apagar():
     data = request.json
     u, cli_id, ses_id = data.get('username'), data.get('cliente_id'), data.get('sessao_id')
     user_file = os.path.join(DATA_DIR, f"{u}.json")
