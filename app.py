@@ -18,9 +18,9 @@ HTML_TEMPLATE = """
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Atlas-Diagnostics PRO — Raio-X Sistémico Completo (AM vs DD)</title>
+<title>Atlas-Diagnostics PRO — Raio-X com Guia Explicativo</title>
 <meta property="og:title" content="Atlas-Diagnostics — Sistema de Diagnóstico Clínico Profissional">
-<meta property="og:description" content="Avaliação cirúrgica com subpilares, gráfico de aranha duplo (AM vs Inércia DD) e relatórios PDF.">
+<meta property="og:description" content="Avaliação cirúrgica com subpilares, guia explicativo '?', gráfico de aranha duplo e relatórios PDF.">
 <meta property="og:image" content="https://atlas-diagnostics.onrender.com/static/capa.png">
 <meta property="og:url" content="https://atlas-diagnostics.onrender.com">
 <meta property="og:type" content="website">
@@ -117,15 +117,59 @@ h1 { font-family: 'Cinzel', serif; color: var(--gold); font-size: 1.6rem; margin
 .pilar-title { font-family: 'Cinzel', serif; font-size: 1rem; color: var(--gold); border-bottom: 1px solid var(--border); padding-bottom: 6px; }
 
 .subpilar-row { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
-.subpilar-name { font-size: 0.8rem; color: var(--text); font-weight: 500; }
+.subpilar-header { display: flex; justify-content: space-between; align-items: center; }
+.subpilar-name { font-size: 0.8rem; color: var(--text); font-weight: 500; display: flex; align-items: center; gap: 6px; }
 
-.sub-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.btn-help {
+    background: rgba(56, 189, 248, 0.15);
+    border: 1px solid var(--blue);
+    color: var(--blue);
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.btn-help:hover { background: var(--blue); color: #000; }
+
+.sub-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px; }
 .sub-group { display: flex; flex-direction: column; gap: 3px; }
 .sub-label { font-size: 0.68rem; color: var(--muted); }
 .options-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; }
 .sub-opt-btn { background: rgba(0,0,0,0.5); border: 1px solid var(--border); border-radius: 4px; color: var(--muted); font-size: 0.58rem; padding: 4px 1px; text-align: center; cursor: pointer; }
 .sub-opt-btn.active-am { background: rgba(212, 175, 55, 0.25); border-color: var(--gold); color: var(--gold); font-weight: bold; }
 .sub-opt-btn.active-dd { background: rgba(239, 68, 68, 0.25); border-color: var(--red); color: #fca5a5; font-weight: bold; }
+
+/* MODAL DE EXPLICAÇÃO */
+#modalHelp {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 999;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+.modal-content {
+    background: var(--card-bg);
+    border: 1px solid var(--gold);
+    border-radius: 14px;
+    padding: 25px;
+    max-width: 500px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.8);
+}
+.modal-title { font-family: 'Cinzel', serif; color: var(--gold); font-size: 1.1rem; }
+.modal-body { font-size: 0.85rem; color: var(--muted); line-height: 1.6; }
+.modal-example { background: rgba(56, 189, 248, 0.1); border-left: 3px solid var(--blue); padding: 10px; border-radius: 6px; color: #fff; font-size: 0.8rem; margin-top: 10px; }
 
 .report-box { background: rgba(0,0,0,0.5); border: 1px solid var(--border); border-radius: 10px; padding: 15px; font-size: 0.88rem; line-height: 1.5; color: var(--muted); }
 .report-box h3 { color: var(--gold); font-family: 'Cinzel', serif; margin-bottom: 8px; }
@@ -134,6 +178,16 @@ h1 { font-family: 'Cinzel', serif; color: var(--gold); font-size: 1.6rem; margin
 </style>
 </head>
 <body>
+
+<!-- JANELA MODAL DE EXPLICAÇÃO (?) -->
+<div id="modalHelp" onclick="fecharModal(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <div id="modalTitle" class="modal-title"></div>
+        <div id="modalBody" class="modal-body"></div>
+        <div id="modalExample" class="modal-example"></div>
+        <button type="button" class="pro-btn" style="align-self: flex-end; margin-top: 10px;" onclick="fecharModalDireto()">Entendido</button>
+    </div>
+</div>
 
 <div class="container">
     <!-- ECRÃ DE AUTENTICAÇÃO -->
@@ -201,7 +255,7 @@ h1 { font-family: 'Cinzel', serif; color: var(--gold); font-size: 1.6rem; margin
         <!-- ESPAÇO DE TRABALHO -->
         <div id="workspaceArea" style="display:none; flex-direction:column; gap:20px;">
             
-            <!-- GRÁFICO DE ARANHA (RADAR DUPLO: AM vs DD) -->
+            <!-- GRÁFICO DE ARANHA -->
             <div class="panel">
                 <span style="font-family:'Cinzel',serif; color:var(--gold); font-size:1.05rem; text-align:center;">🕸️ Gráfico de Aranha — Confronto Sistémico (Energia AM vs Inércia/Peso DD)</span>
                 <div class="chart-container">
@@ -219,7 +273,7 @@ h1 { font-family: 'Cinzel', serif; color: var(--gold); font-size: 1.6rem; margin
                 <input type="range" id="rangeImpacto" min="0" max="100" value="50" style="accent-color: var(--gold);" oninput="document.getElementById('lblImpactoVal').innerText = this.value + '%'">
             </div>
 
-            <!-- GRELHA DOS PILARES COM SUBPILARES (AM e DD) -->
+            <!-- GRELHA DOS PILARES -->
             <div class="grid-pilares" id="pilaresGrid"></div>
 
             <!-- BOTÕES DE AÇÃO -->
@@ -261,98 +315,246 @@ const pilaresDef = [
     {
         id: 1, nome: "1. Sono e Descanso",
         subpilares: [
-            { id: "s1_1", nome: "Dormir cedo e rotina noturna" },
-            { id: "s1_2", nome: "Estabilidade e profundidade do sono" },
-            { id: "s1_3", nome: "Ausência de insónias e mente confusa" },
-            { id: "s1_4", nome: "Ambiente (sem barulho, luz ou stress)" }
+            { 
+                id: "s1_1", nome: "Dormir cedo e rotina noturna", 
+                desc: "Avalia se o cliente consegue deitar-se a horas consistentes e desligar dos ecrãs antes de dormir.",
+                ex: "Exemplo: Deitar consistentemente após as 02h00 a ver o telemóvel indica pontuação baixa."
+            },
+            { 
+                id: "s1_2", nome: "Estabilidade e profundidade do sono", 
+                desc: "Mede a qualidade do descanso biológico sem despertares constantes durante a noite.",
+                ex: "Exemplo: Acordar várias vezes a meio da noite com sensação de cansaço profundo."
+            },
+            { 
+                id: "s1_3", nome: "Ausência de insónias e mente confusa", 
+                desc: "Analisa a facilidade em adormecer sem ruminação mental ou pensamentos acelerados.",
+                ex: "Exemplo: Ficar horas deitado a pensar nos problemas do dia seguinte sem conseguir desligar."
+            },
+            { 
+                id: "s1_4", nome: "Ambiente (sem barulho, luz ou stress)", 
+                desc: "Verifica se o espaço físico propicia o descanso total ou se há fatores externos de perturbação.",
+                ex: "Exemplo: Dormir com luz excessiva, barulho na rua ou preocupações financeiras na cabeça."
+            }
         ]
     },
     {
         id: 2, nome: "2. Dinheiro e Contas",
         subpilares: [
-            { id: "s2_1", nome: "Fluxo de caixa e obrigações" },
-            { id: "s2_2", nome: "Ausência de ansiedade por dívidas" },
-            { id: "s2_3", nome: "Margem de poupança" }
+            { 
+                id: "s2_1", nome: "Fluxo de caixa e obrigações", 
+                desc: "Avalia se os rendimentos cobrem as despesas essenciais do mês sem sobressaltos.",
+                ex: "Exemplo: O dinheiro acaba antes do mês terminar ou falta para contas básicas."
+            },
+            { 
+                id: "s2_2", nome: "Ausência de ansiedade por dívidas", 
+                desc: "Mede o peso psicológico associado a compromissos financeiros pendentes.",
+                ex: "Exemplo: Sentir o estômago apertado sempre que chegam cartas de cobrança ou faturas."
+            },
+            { 
+                id: "s2_3", nome: "Margem de poupança", 
+                desc: "Verifica a capacidade de reter capital para imprevistos e tranquilidade futura.",
+                ex: "Exemplo: Impossibilidade total de amealhar dinheiro, vivendo estritamente no limite."
+            }
         ]
     },
     {
         id: 3, nome: "3. Trabalho e Projetos",
         subpilares: [
-            { id: "s3_1", nome: "Realização profissional" },
-            { id: "s3_2", nome: "Gestão de prazos sem esgotamento" },
-            { id: "s3_3", nome: "Retorno financeiro e reconhecimento" }
+            { 
+                id: "s3_1", nome: "Realização profissional", 
+                desc: "Avalia se a atividade diária traz propósito e satisfação ou apenas desgaste mecânico.",
+                ex: "Exemplo: Sentir que o trabalho atual é um fardo sem sentido nem crescimento."
+            },
+            { 
+                id: "s3_2", nome: "Gestão de prazos sem esgotamento", 
+                desc: "Mede o nível de stress na entrega de tarefas e pressão diária.",
+                ex: "Exemplo: Apagar fogos constantemente e trabalhar em permanente estado de emergência."
+            },
+            { 
+                id: "s3_3", nome: "Retorno financeiro e reconhecimento", 
+                desc: "Verifica se o esforço investido é justamente recompensado.",
+                ex: "Exemplo: Trabalhar exaustivamente e sentir que o retorno é desproporcional."
+            }
         ]
     },
     {
         id: 4, nome: "4. Família e Casa",
         subpilares: [
-            { id: "s4_1", nome: "Harmonia e comunicação no lar" },
-            { id: "s4_2", nome: "Apoio mútuo e resolução de conflitos" },
-            { id: "s4_3", nome: "Tempo de qualidade partilhado" }
+            { 
+                id: "s4_1", nome: "Harmonia e comunicação no lar", 
+                desc: "Avalia o clima emocional dominante no espaço doméstico e familiar.",
+                ex: "Exemplo: Discussões frequentes, silêncios pesados ou mal-entendidos constantes."
+            },
+            { 
+                id: "s4_2", nome: "Apoio mútuo e resolução de conflitos", 
+                desc: "Mede a cooperação entre os membros da família face aos problemas.",
+                ex: "Exemplo: Sentir que carrega sozinho todas as responsabilidades da casa."
+            },
+            { 
+                id: "s4_3", nome: "Tempo de qualidade partilhado", 
+                desc: "Verifica se há momentos positivos de convívio e união familiar.",
+                ex: "Exemplo: Estar na mesma casa mas sem qualquer ligação emocional ou partilha."
+            }
         ]
     },
     {
         id: 5, nome: "5. Cabeça e Concentração",
         subpilares: [
-            { id: "s5_1", nome: "Foco sem ruminação mental" },
-            { id: "s5_2", nome: "Clareza emocional e resiliência" },
-            { id: "s5_3", nome: "Ausência de exaustão mental" }
+            { 
+                id: "s5_1", nome: "Foco sem ruminação mental", 
+                desc: "Avalia a capacidade de focar numa tarefa sem dispersão ou pensamentos repetitivos.",
+                ex: "Exemplo: Começar 5 coisas e não acabar nenhuma devido à distração mental."
+            },
+            { 
+                id: "s5_2", nome: "Clareza emocional e resiliência", 
+                desc: "Mede a estabilidade perante imprevistos e frustrações do dia a dia.",
+                ex: "Exemplo: Irritar-se facilmente com pequenas contrariedades ou falhas."
+            },
+            { 
+                id: "s5_3", nome: "Ausência de exaustão mental", 
+                desc: "Verifica o esgotamento cognitivo ao fim do dia.",
+                ex: "Exemplo: Chegar ao fim do dia com a sensação de nevoeiro mental e incapacidade de pensar."
+            }
         ]
     },
     {
         id: 6, nome: "6. Ideias e Aprendizagem",
         subpilares: [
-            { id: "s6_1", nome: "Estímulo intelectual" },
-            { id: "s6_2", nome: "Criatividade e aplicação" },
-            { id: "s6_3", nome: "Curiosidade e abertura" }
+            { 
+                id: "s6_1", nome: "Estímulo intelectual", 
+                desc: "Avalia se a mente está a ser alimentada com novos estímulos e conhecimento.",
+                ex: "Exemplo: Estagnação total por falta de leitura, estudo ou novas experiências."
+            },
+            { 
+                id: "s6_2", nome: "Criatividade e aplicação", 
+                desc: "Mede a capacidade de transformar ideias em projetos práticos.",
+                ex: "Exemplo: Ter muitas ideias criativas mas nunca conseguir executar nenhuma."
+            },
+            { 
+                id: "s6_3", nome: "Curiosidade e abertura", 
+                desc: "Verifica o entusiasmo em explorar novas perspetivas e soluções.",
+                ex: "Exemplo: Resistência mental a aprender ferramentas novas ou a mudar métodos."
+            }
         ]
     },
     {
         id: 7, nome: "7. Casa e Espaço à Volta",
         subpilares: [
-            { id: "s7_1", nome: "Organização e limpeza do espaço" },
-            { id: "s7_2", nome: "Sensação de refúgio no lar" },
-            { id: "s7_3", nome: "Conforto ambiental" }
+            { 
+                id: "s7_1", nome: "Organização e limpeza do espaço", 
+                desc: "Avalia a ordem física do ambiente onde vive e trabalha.",
+                ex: "Exemplo: Divisões caóticas, acumulação de objetos e desordem generalizada."
+            },
+            { 
+                id: "s7_2", nome: "Sensação de refúgio no lar", 
+                desc: "Mede se o espaço transmite paz e descanso ou fadiga visual.",
+                ex: "Exemplo: Chegar a casa e sentir mais ansiedade em vez de relaxamento."
+            },
+            { 
+                id: "s7_3", nome: "Conforto ambiental", 
+                desc: "Verifica temperatura, iluminação e condições ergonómicas básicas.",
+                ex: "Exemplo: Iluminação deficiente ou desconforto físico constante no local de permanência."
+            }
         ]
     },
     {
         id: 8, nome: "8. Amigos e Apoio",
         subpilares: [
-            { id: "s8_1", nome: "Rede de contactos de confiança" },
-            { id: "s8_2", nome: "Partilha social saudável" },
-            { id: "s8_3", nome: "Disponibilidade de apoio" }
+            { 
+                id: "s8_1", nome: "Rede de contactos de confiança", 
+                desc: "Avalia a existência de pessoas genuínas com quem partilhar vivências.",
+                ex: "Exemplo: Sentir isolamento social ou falta de amigos verdadeiros."
+            },
+            { 
+                id: "s8_2", nome: "Partilha social saudável", 
+                desc: "Mede se os momentos sociais trazem energia positiva ou drenagem.",
+                ex: "Exemplo: Estar rodeado de pessoas que apenas trazem toxicidade e queixas."
+            },
+            { 
+                id: "s8_3", nome: "Disponibilidade de apoio", 
+                desc: "Verifica se há suporte prático e emocional nos momentos difíceis.",
+                ex: "Exemplo: Perceção de que está totalmente sozinho para resolver crises."
+            }
         ]
     },
     {
         id: 9, nome: "9. Organização do Tempo",
         subpilares: [
-            { id: "s9_1", nome: "Controlo sobre a agenda" },
-            { id: "s9_2", nome: "Equilíbrio trabalho/descanso" },
-            { id: "s9_3", nome: "Ausência de atropelo por urgências" }
+            { 
+                id: "s9_1", nome: "Controlo sobre a agenda", 
+                desc: "Avalia se gere o seu tempo ou se é gerido pelas urgências dos outros.",
+                ex: "Exemplo: O dia passa a correr e sente que não fez nada do que planeou."
+            },
+            { 
+                id: "s9_2", nome: "Equilíbrio trabalho/descanso", 
+                desc: "Mede a separação saudável entre obrigações profissionais e lazer.",
+                ex: "Exemplo: Trabalhar 24 horas por dia sem pausas para descontrair."
+            },
+            { 
+                id: "s9_3", nome: "Ausência de atropelo por urgências", 
+                desc: "Verifica a capacidade de antecipar tarefas em vez de reagir a incêndios.",
+                ex: "Exemplo: Viver sempre atrasado, a correr contra o relógio em pânico."
+            }
         ]
     },
     {
         id: 10, nome: "10. Planos para o Futuro",
         subpilares: [
-            { id: "s10_1", nome: "Visão clara a médio/longo prazo" },
-            { id: "s10_2", nome: "Metas estruturadas e acionáveis" },
-            { id: "s10_3", nome: "Sentimento de esperança" }
+            { 
+                id: "s10_1", nome: "Visão clara a médio/longo prazo", 
+                desc: "Avalia se sabe exatamente para onde quer caminhar nos próximos anos.",
+                ex: "Exemplo: Andar à deriva sem rumo profissional ou pessoal definido."
+            },
+            { 
+                id: "s10_2", nome: "Metas estruturadas e acionáveis", 
+                desc: "Mede se os objetivos estão divididos em passos práticos diários.",
+                ex: "Exemplo: Ter grandes sonhos abstratos mas nenhum plano concreto no papel."
+            },
+            { 
+                id: "s10_3", nome: "Sentimento de esperança", 
+                desc: "Verifica o otimismo e a motivação face ao futuro.",
+                ex: "Exemplo: Ceticismo e desesperança profunda quanto ao amanhã."
+            }
         ]
     },
     {
         id: 11, nome: "11. Saúde e Corpo",
         subpilares: [
-            { id: "s11_1", nome: "Nutrição e hidratação" },
-            { id: "s11_2", nome: "Exercício físico e mobilidade" },
-            { id: "s11_3", nome: "Vitalidade energética global" }
+            { 
+                id: "s11_1", nome: "Nutrição e hidratação", 
+                desc: "Avalia a qualidade dos hábitos alimentares e ingestão de água.",
+                ex: "Exemplo: Alimentação rica em processados, açúcar e desidratação crónica."
+            },
+            { 
+                id: "s11_2", nome: "Exercício físico e mobilidade", 
+                desc: "Mede a prática regular de atividade física e combate ao sedentarismo.",
+                ex: "Exemplo: Vida totalmente sedentária com dores articulares por falta de movimento."
+            },
+            { 
+                id: "s11_3", nome: "Vitalidade energética global", 
+                desc: "Verifica a sensação geral de vigor físico ao longo do dia.",
+                ex: "Exemplo: Acordar já sem energia e arrastar-se fisicamente até à noite."
+            }
         ]
     },
     {
         id: 12, nome: "12. Paz Interior e Valores",
         subpilares: [
-            { id: "s12_1", nome: "Alinhamento com princípios éticos" },
-            { id: "s12_2", nome: "Ausência de conflito interno" },
-            { id: "s12_3", nome: "Serenidade e propósito" }
+            { 
+                id: "s12_1", nome: "Alinhamento com princípios éticos", 
+                desc: "Avalia se vive de acordo com o que realmente valoriza na vida.",
+                ex: "Exemplo: Aceitar situações profissionais ou pessoais que violam os seus valores."
+            },
+            { 
+                id: "s12_2", nome: "Ausência de conflito interno", 
+                desc: "Mede a paz de espírito face a decisões passadas e atuais.",
+                ex: "Exemplo: Sentimento persistente de culpa, arrependimento ou auto-cobrança."
+            },
+            { 
+                id: "s12_3", nome: "Serenidade e propósito", 
+                desc: "Verifica a harmonia espiritual e emocional interior.",
+                ex: "Exemplo: Vazio existencial crónico e agitação mental permanente."
+            }
         ]
     }
 ];
@@ -444,9 +646,16 @@ function initGrid() {
             <div class="pilar-title">${p.nome}</div>`;
         
         p.subpilares.forEach(sp => {
+            let safeDesc = (sp.desc || '').replace(/'/g, "'");
+            let safeEx = (sp.ex || '').replace(/'/g, "'");
+            let safeNome = sp.nome.replace(/'/g, "'");
+
             html += `
             <div class="subpilar-row">
-                <span class="subpilar-name">🔹 ${sp.nome}</span>
+                <div class="subpilar-header">
+                    <span class="subpilar-name">🔹 ${sp.nome}</span>
+                    <button type="button" class="btn-help" onclick="abrirModal('${safeNome}', '${safeDesc}', '${safeEx}')">?</button>
+                </div>
                 <div class="sub-controls">
                     <div class="sub-group">
                         <span class="sub-label">Energia (AM):</span>
@@ -473,6 +682,21 @@ function initGrid() {
         html += `</div>`;
     });
     grid.innerHTML = html;
+}
+
+function abrirModal(titulo, desc, ex) {
+    document.getElementById('modalTitle').innerText = titulo;
+    document.getElementById('modalBody').innerText = desc;
+    document.getElementById('modalExample').innerText = ex;
+    document.getElementById('modalHelp').style.display = 'flex';
+}
+
+function fecharModal(e) {
+    document.getElementById('modalHelp').style.display = 'none';
+}
+
+function fecharModalDireto() {
+    document.getElementById('modalHelp').style.display = 'none';
 }
 
 function selecionarSub(subId, tipo, nivel, btn) {
@@ -729,9 +953,7 @@ function calcularResultadoRaioX() {
         dd: calcularMediaPilar(p, 'dd')
     }));
     
-    // Ordenar por maior inércia/peso (DD) e menor energia (AM)
     mediasPilares.sort((a, b) => (b.dd - b.am) - (a.am - a.ai));
-
     let maisCriticos = mediasPilares.slice(0, 3);
     let impacto = document.getElementById('rangeImpacto').value;
 
