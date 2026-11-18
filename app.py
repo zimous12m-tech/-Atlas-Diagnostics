@@ -424,7 +424,7 @@ const pilaresDef = [
         subpilares: [
             { id: "s12_1", nome: "Alinhamento com princípios éticos", tipo: "recurso", desc: "Viver de acordo com o que realmente valoriza.", ex: "Ex: Aceitar situações que violam os seus princípios = Fraco." },
             { id: "s12_2", nome: "Ausência de conflito interno", tipo: "sintoma", desc: "Culpa, arrependimento ou auto-cobrança excessiva.", ex: "Ex: Sentimento persistente de culpa e ruminação = Frequente (Mau)." },
-            { id: "s12_3", nome: "Serenidade e propósito", tipo: "recurso", desc: "Harmonia espiritual e emocional interior.", ex: "Ex: Vazio existencial crónico = Fraco." }
+            { id: "s12_3", nome: "Serenidade e propósito", tipo: "recurso", desc: "Harmonia espiritual e emocional interior.", ex: "Ex: V vazio existencial crónico = Fraco." }
         ]
     }
 ];
@@ -572,9 +572,9 @@ function initGrid() {
             <div class="pilar-title">${p.nome}</div>`;
         
         p.subpilares.forEach(sp => {
-            let safeDesc = (sp.desc || '').replace(/'/g, "&#39;");
-            let safeEx = (sp.ex || '').replace(/'/g, "&#39;");
-            let safeNome = sp.nome.replace(/'/g, "&#39;");
+            let safeDesc = (sp.desc || '').replace(/'/g, "'");
+            let safeEx = (sp.ex || '').replace(/'/g, "'");
+            let safeNome = sp.nome.replace(/'/g, "'");
 
             let btn1 = "Baixo", btn2 = "Médio", btn3 = "Alto";
             if(sp.tipo === 'sintoma') {
@@ -883,10 +883,12 @@ function calcularResultadoRaioX() {
     let mediasPilares = pilaresDef.map(p => ({
         nome: p.nome,
         am: calcularMediaPilar(p, 'am'),
-        dd: calcularMediaPilar(p, 'dd')
+        dd: calcularMediaPilar(p, 'dd'),
+        atrito: calcularMediaPilar(p, 'dd') - calcularMediaPilar(p, 'am') // <-- CORREÇÃO: Atrito real (Inércia menos Capacidade)
     }));
     
-    mediasPilares.sort((a, b) => (b.dd - b.am) - (a.am - a.dd));
+    // CORREÇÃO DA ORDENAÇÃO: Ordenar estritamente pelo maior atrito real
+    mediasPilares.sort((a, b) => b.atrito - a.atrito);
     let maisCriticos = mediasPilares.slice(0, 3);
     let impacto = document.getElementById('rangeImpacto').value;
 
@@ -896,7 +898,7 @@ function calcularResultadoRaioX() {
     });
     raioHtml += `<br><strong>Fator de Impacto Diário:</strong> ${impacto}%<br>`;
     
-    let conselhoHtml = `O vetor causal aponta para bloqueios em <strong>${maisCriticos[0].nome}</strong>, onde a inércia supera a capacidade. Intervir nestes subpilares reduzirá o atrito sistémico em ${impacto}% do dia a dia do cliente.`;
+    let conselhoHtml = `O vetor causal aponta para bloqueios em <strong>${maisCriticos[0].nome}</strong>, onde a inércia (${maisCriticos[0].dd}) supera a capacidade (${maisCriticos[0].am}). Intervir nestes subpilares reduzirá o atrito sistémico em ${impacto}% do dia a dia do cliente.`;
 
     document.getElementById('txtRaioX').innerHTML = raioHtml;
     document.getElementById('txtConselho').innerHTML = conselhoHtml;
@@ -1008,20 +1010,16 @@ def api_recuperar():
     }
 
     match = False
-    # Validação por E-mail
     if e and user_data.get('email') and user_data.get('email').lower() == e.lower():
         match = True
-    # Validação por PIN Secreto
     elif s and user_data.get('secret') and user_data.get('secret') == hash_password(s):
         match = True
-    # Validação por Pergunta e Resposta de Segurança
     elif r and user_data.get('resposta') and user_data.get('pergunta_id') == q_id and user_data.get('resposta') == hash_password(r):
         match = True
 
     if not match:
         return jsonify({'success': False, 'error': 'Validação falhou. A resposta à pergunta, e-mail ou PIN não coincidem.'})
 
-    # Atualizar password
     user_data['password'] = hash_password(p_nova)
     with open(user_file, 'w', encoding='utf-8') as f:
         json.dump(user_data, f, ensure_ascii=False, indent=4)
